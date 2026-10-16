@@ -3,23 +3,107 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Agenda de Massoterapia</title>
+  <title>Agenda Nobre</title>
   <link rel="stylesheet" href="style.css">
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
-  <div id="success-banner" class="hidden">
+  <div id="auth-container" class="auth-container">
+    <div id="login-card" class="modal-card">
+      <div class="logo-box">✿</div>
+      <h2>Login</h2>
+      <form id="login-form">
+        <div class="form-group">
+          <label for="login-email">E-mail</label>
+          <input type="email" id="login-email" required>
+        </div>
+        <div class="form-group">
+          <label for="login-password">Senha</label>
+          <input type="password" id="login-password" required>
+        </div>
+        <p id="login-error" class="error-msg hidden">Credenciais inválidas.</p>
+        <button type="submit" class="btn-wide bg-primary shadow-sm">Entrar</button>
+        
+        <div style="margin: 1rem 0; display: flex; align-items: center; gap: 0.5rem; color: hsl(var(--muted-foreground)); font-size: 0.75rem;">
+          <hr style="flex: 1; border: 0; border-top: 1px solid hsl(var(--border));">
+          OU
+          <hr style="flex: 1; border: 0; border-top: 1px solid hsl(var(--border));">
+        </div>
+
+        <div id="google-login-btn" style="display: flex; justify-content: center;"></div>
+        
+        <div id="debug-users" style="margin-top: 1.5rem; padding: 0.75rem; background: hsl(var(--muted)); border-radius: 0.5rem; font-size: 0.75rem;">
+          <p style="font-weight: 600; margin-bottom: 0.5rem; color: hsl(var(--muted-foreground));">E-mails cadastrados (Teste):</p>
+          <ul id="debug-user-list" style="list-style: none; color: hsl(var(--primary));">
+            <!-- Lista de e-mails -->
+          </ul>
+        </div>
+
+        <p style="margin-top: 1rem; text-align: center; font-size: 0.875rem;">
+          Não tem conta? <a href="#" id="go-to-register">Cadastre sua empresa</a>
+        </p>
+      </form>
+    </div>
+
+    <div id="register-card" class="modal-card hidden">
+      <div class="logo-box">✿</div>
+      <h2>Cadastro de Empresa</h2>
+      <form id="register-form">
+        <div class="form-group">
+          <label for="reg-name">Nome da Empresa</label>
+          <input type="text" id="reg-name" required>
+        </div>
+        <div class="form-group">
+          <label for="reg-business">Ramo</label>
+          <input type="text" id="reg-business" required placeholder="Ex: Massoterapia">
+        </div>
+        <div class="form-group">
+          <label for="reg-email">E-mail</label>
+          <input type="email" id="reg-email" required>
+        </div>
+        <div class="form-group">
+          <label for="reg-password">Senha</label>
+          <input type="password" id="reg-password" required minlength="6">
+        </div>
+        <p id="reg-error" class="error-msg hidden">E-mail já cadastrado.</p>
+        <button type="submit" class="btn-wide bg-primary shadow-sm">Criar Perfil</button>
+
+        <div style="margin: 1rem 0; display: flex; align-items: center; gap: 0.5rem; color: hsl(var(--muted-foreground)); font-size: 0.75rem;">
+          <hr style="flex: 1; border: 0; border-top: 1px solid hsl(var(--border));">
+          OU
+          <hr style="flex: 1; border: 0; border-top: 1px solid hsl(var(--border));">
+        </div>
+
+        <div id="google-register-btn" style="display: flex; justify-content: center;"></div>
+
+        <p style="margin-top: 1rem; text-align: center; font-size: 0.875rem;">
+          Já tem conta? <a href="#" id="go-to-login">Fazer Login</a>
+        </p>
+      </form>
+    </div>
+  </div>
+
+  <div id="app-content" class="hidden">
+    <div id="success-banner" class="hidden">
     <span id="success-icon">✓</span>
     <span id="success-message">Sessões criadas com sucesso!</span>
   </div>
 
   <div class="app-container">
     <header>
-      <div class="logo-box">✿</div>
-      <h1 id="header-business-title">Agenda</h1>
+      <div style="display: flex; justify-content: center; align-items: center; gap: 0.75rem;">
+        <div class="logo-box" style="margin: 0;">✿</div>
+        <h1 id="header-business-title">Agenda</h1>
+        <button id="btn-admin" class="btn-admin" >🛡️ Admin</button>
+      </div>
       <p id="header-business-desc">Seus atendimentos organizados, com leveza.</p>
+      <p id="user-info" style="font-size: 0.875rem; color: hsl(var(--muted-foreground)); margin-top: 0.5rem;"></p>
     </header>
 
-    <button id="btn-settings" class="btn-settings shadow-sm">⚙️ Configurações</button>
+    <div style="display: flex; gap: 0.5rem; flex-direction: column;">
+      <button id="btn-settings" class="btn-settings shadow-sm">⚙️ Configurações</button>
+      <button id="btn-logout" class="btn-logout shadow-sm">Logout</button>
+    </div>
     
     <div class="finance-summary">
       <div class="finance-card">
@@ -56,6 +140,12 @@
               <option value="all">Todos</option>
               <option value="paid">Pagos</option>
               <option value="unpaid">Não pagos</option>
+            </select>
+          </div>
+          <div class="form-group" style="flex: 1; min-width: 140px; margin-bottom: 0;">
+            <label>Profissional</label>
+            <select id="filter-professional">
+              <option value="all">Todos</option>
             </select>
           </div>
         </div>
@@ -119,7 +209,9 @@
         </div>
         <div class="form-group">
           <label for="therapist">Nome do Profissional</label>
-          <input type="text" id="therapist" required placeholder="Ex.: Ana Souza">
+          <select id="therapist" required>
+            <!-- Opções dinâmicas -->
+          </select>
         </div>
         <div class="form-group">
           <label for="type">Tipo de Serviço</label>
@@ -194,6 +286,15 @@
         </div>
         
         <div class="form-group">
+          <label>Profissionais</label>
+          <div id="professionals-list">
+            <!-- Lista dinâmica de profissionais -->
+          </div>
+          <button type="button" id="btn-add-professional" class="btn-wide bg-secondary" style="margin-top: 0.5rem; padding: 0.5rem;">+ Adicionar Profissional</button>
+          <p id="multiple-professionals-warning" class="hidden" style="font-size: 0.75rem; color: hsl(var(--destructive)); margin-top: 0.5rem;">O cadastro de múltiplos profissionais está bloqueado pelo administrador.</p>
+        </div>
+        
+        <div class="form-group">
           <label>Serviços, Valores e Duração (min)</label>
           <div id="services-list">
             <!-- Lista dinâmica de serviços -->
@@ -205,6 +306,34 @@
       </form>
     </div>
   </div>
+
+  <!-- Modal de Admin -->
+  <div id="admin-overlay" class="modal-overlay hidden">
+    <div class="modal-card admin-modal">
+      <span id="close-admin" class="close-x">✕</span>
+      <h2 style="margin-bottom: 1.5rem; font-size: 1.25rem;">Painel Administrativo</h2>
+      
+      <div class="admin-table-container">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th>E-mail</th>
+              <th>Empresa/Ramo</th>
+              <th>Qtd. Prof.</th>
+              <th>Cadastro em</th>
+              <th>Tempo de Uso</th>
+            </tr>
+          </thead>
+          <tbody id="admin-user-list">
+            <!-- Preenchido via JS -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  </div> <!-- Fim de app-content -->
 
   <script src="script.js"></script>
 </body>

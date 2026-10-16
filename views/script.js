@@ -1,20 +1,29 @@
 (function() {
   // Configurações e Estado
-  const STORAGE_KEY = 'agenda-massoterapia';
-  const CONFIG_KEY = 'app-config';
-  const OLD_STORAGE_KEY = 'massage_appointments';
+  const USERS_KEY = 'agenda-users';
+  const SESSION_KEY = 'agenda-session';
+  
+  let currentUser = null;
   let appointments = [];
+  let gisInited = false;
+
+  const CLIENT_ID = "665567298487-am8coo2krrd2msdno64p3ng5om1pfr75.apps.googleusercontent.com"; // Substitua pelo seu Client ID
   let config = {
-    businessType: 'Massoterapia',
+    businessType: '',
+    professionals: [],
     services: [
-      { name: 'Massagem Relaxante', value: 150, duration: 60 },
-      { name: 'Drenagem Linfática', value: 160, duration: 60 },
-      { name: 'Massagem Modeladora', value: 160, duration: 60 },
-      { name: 'Massagem Terapêutica', value: 170, duration: 60 },
-      { name: 'Reflexologia', value: 100, duration: 30 },
-      { name: 'Shiatsu', value: 180, duration: 60 }
+      { }
     ]
   };
+
+  function getStorageKey() {
+    return `agenda-data-${currentUser.email}`;
+  }
+
+  function getConfigKey() {
+    return `agenda-config-${currentUser.email}`;
+  }
+
   let currentView = 'list';
   let calendarMode = 'month'; // 'month', 'week', 'day'
   let currentMonth = new Date();
@@ -50,6 +59,7 @@
     listContainer: document.getElementById('list-container'),
     filterWhen: document.getElementById('filter-when'),
     filterPayment: document.getElementById('filter-payment'),
+    filterProfessional: document.getElementById('filter-professional'),
     filterCount: document.getElementById('filter-count'),
     btnClearFilters: document.getElementById('btn-clear-filters'),
     calendarTitle: document.getElementById('calendar-title'),
@@ -74,36 +84,302 @@
     settingsForm: document.getElementById('settings-form'),
     servicesList: document.getElementById('services-list'),
     btnAddService: document.getElementById('btn-add-service'),
+    professionalsList: document.getElementById('professionals-list'),
+    btnAddProfessional: document.getElementById('btn-add-professional'),
+    multipleProfessionalsWarning: document.getElementById('multiple-professionals-warning'),
     configBusinessType: document.getElementById('config-business-type'),
     headerTitle: document.getElementById('header-business-title'),
     headerDesc: document.getElementById('header-business-desc'),
     modalTitle: document.querySelector('#modal-overlay h2'),
     therapistLabel: document.querySelector('label[for="therapist"]'),
     therapistInput: document.getElementById('therapist'),
-    typeLabel: document.querySelector('label[for="type"]')
+    typeLabel: document.querySelector('label[for="type"]'),
+    
+    // Auth elements
+    authContainer: document.getElementById('auth-container'),
+    appContent: document.getElementById('app-content'),
+    loginForm: document.getElementById('login-form'),
+    registerForm: document.getElementById('register-form'),
+    loginCard: document.getElementById('login-card'),
+    registerCard: document.getElementById('register-card'),
+    goToRegister: document.getElementById('go-to-register'),
+    goToLogin: document.getElementById('go-to-login'),
+    loginError: document.getElementById('login-error'),
+    regError: document.getElementById('reg-error'),
+    btnLogout: document.getElementById('btn-logout'),
+    userInfo: document.getElementById('user-info'),
+    debugUserList: document.getElementById('debug-user-list'),
+    
+    // Admin elements
+    btnAdmin: document.getElementById('btn-admin'),
+    adminOverlay: document.getElementById('admin-overlay'),
+    closeAdmin: document.getElementById('close-admin'),
+    adminUserList: document.getElementById('admin-user-list')
   };
 
   // --- Inicialização ---
 
   function init() {
-    loadConfig();
-    loadData();
+    checkSession();
     setupEventListeners();
-    updateFinanceSummary();
-    applyConfig();
-    render();
+    initGoogleAuth();
   }
 
-  function loadConfig() {
-    const data = localStorage.getItem(CONFIG_KEY);
-    if (data) {
-      config = JSON.parse(data);
+  function initGoogleAuth() {
+    if (typeof google === 'undefined') {
+      setTimeout(initGoogleAuth, 100);
+      return;
+    }
+
+    google.accounts.id.initialize({
+      client_id: CLIENT_ID,
+      callback: handleCredentialResponse,
+      auto_select: true
+    });
+
+    gisInited = true;
+
+    google.accounts.id.renderButton(
+      document.getElementById("google-login-btn"),
+      { theme: "outline", size: "large", width: 300 }
+    );
+
+    google.accounts.id.renderButton(
+      document.getElementById("google-register-btn"),
+      { theme: "outline", size: "large", width: 300 }
+    );
+  }
+
+  async function handleCredentialResponse(response) {
+    try {
+      const resp = await fetch('/api/auth/google', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ credential: response.credential })
+      });
+
+      if (!resp.ok) {
+        const errorText = await resp.text();
+        alert('Erro no login com Google: ' + errorText);
+        return;
+      }
+
+      const user = await resp.json();
+      currentUser = user;
+      localStorage.setItem(SESSION_KEY, JSON.stringify(currentUser));
+      showApp();
+    } catch (err) {
+      console.error('Erro na autenticação Google:', err);
+      alert('Ocorreu um erro ao tentar entrar com o Google.');
     }
   }
 
-  function saveConfig() {
-    localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
+  async function checkSession() {
+    const session = localStorage.getItem(SESSION_KEY);
+    if (session) {
+      currentUser = JSON.parse(session);
+      // Revalida perfil para atualizar roles/permissões
+      try {
+        const resp = await fetch(`/api/me?email=${encodeURIComponent(currentUser.email)}`);
+        if (resp.ok) {
+          const freshUser = await resp.json();
+          currentUser = freshUser;
+          localStorage.setItem(SESSION_KEY, JSON.stringify(currentUser));
+        }
+      } catch (err) {
+        console.error("Erro ao revalidar sessão:", err);
+      }
+      await showApp();
+    } else {
+      showAuth();
+    }
+  }
+
+  function showAuth() {
+    elements.authContainer.classList.remove('hidden');
+    elements.appContent.classList.add('hidden');
+    showLogin();
+  }
+
+  async function showApp() {
+    elements.authContainer.classList.add('hidden');
+    elements.appContent.classList.remove('hidden');
+    
+    // Reset state before loading new user data
+    appointments = [];
+    config = {
+      businessType: currentUser.business || 'Massoterapia',
+      professionals: [currentUser.name],
+      services: [
+      ]
+    };
+
+    await loadConfig();
+
+    // Se carregar config e não tiver profissionais, usa o nome do usuário
+    if (!config.professionals || config.professionals.length === 0) {
+      config.professionals = [currentUser.name];
+      await saveConfig();
+    }
+    await loadData();
+    updateFinanceSummary();
     applyConfig();
+    
+    if (elements.userInfo) {
+      elements.userInfo.textContent = `Logado como: ${currentUser.name} (${currentUser.email})`;
+      if (currentUser.role === 'admin') {
+          elements.userInfo.textContent += " (Administrador)";
+      }
+    }
+
+    // Toggle Admin Button based on role
+    if (elements.btnAdmin) {
+      const isAdmin = currentUser && currentUser.role === 'admin';
+      elements.btnAdmin.classList.toggle('hidden', !isAdmin);
+    }
+    
+    render();
+  }
+
+  function showLogin() {
+    elements.loginCard.classList.remove('hidden');
+    elements.registerCard.classList.add('hidden');
+    elements.loginError.classList.add('hidden');
+    updateDebugUserList();
+  }
+
+  async function updateDebugUserList() {
+    if (!elements.debugUserList) return;
+    try {
+      const resp = await fetch('/api/debug/users');
+      const users = await resp.json();
+      if (users.length === 0) {
+        elements.debugUserList.innerHTML = '<li>Nenhum usuário cadastrado</li>';
+        return;
+      }
+      
+      elements.debugUserList.innerHTML = '';
+      users.forEach(user => {
+        const li = document.createElement('li');
+        li.textContent = user.email;
+        li.style.cursor = 'pointer';
+        li.style.textDecoration = 'underline';
+        li.style.marginBottom = '0.25rem';
+        li.addEventListener('click', () => {
+          document.getElementById('login-email').value = user.email;
+          document.getElementById('login-password').value = user.password;
+        });
+        elements.debugUserList.appendChild(li);
+      });
+    } catch (err) {
+      elements.debugUserList.innerHTML = '<li>Erro ao carregar lista</li>';
+    }
+  }
+
+  function showRegister() {
+    elements.loginCard.classList.add('hidden');
+    elements.registerCard.classList.remove('hidden');
+    elements.regError.classList.add('hidden');
+  }
+
+  async function handleLogin(e) {
+    e.preventDefault();
+    const email = document.getElementById('login-email').value;
+    const password = document.getElementById('login-password').value;
+
+    try {
+      const resp = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+
+      if (resp.ok) {
+        const user = await resp.json();
+        currentUser = user;
+        localStorage.setItem(SESSION_KEY, JSON.stringify(user));
+        await showApp();
+        elements.loginForm.reset();
+      } else {
+        elements.loginError.classList.remove('hidden');
+      }
+    } catch (err) {
+      elements.loginError.textContent = "Erro de conexão.";
+      elements.loginError.classList.remove('hidden');
+    }
+  }
+
+  async function handleRegister(e) {
+    e.preventDefault();
+    const name = document.getElementById('reg-name').value;
+    const business = document.getElementById('reg-business').value;
+    const email = document.getElementById('reg-email').value;
+    const password = document.getElementById('reg-password').value;
+
+    try {
+      const resp = await fetch('/api/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, business, email, password })
+      });
+
+      if (resp.ok) {
+        const newUser = await resp.json();
+        // Auto login after register
+        currentUser = newUser;
+        localStorage.setItem(SESSION_KEY, JSON.stringify(newUser));
+        await showApp();
+        elements.registerForm.reset();
+      } else if (resp.status === 409) {
+        elements.regError.textContent = "E-mail já cadastrado.";
+        elements.regError.classList.remove('hidden');
+      } else {
+        elements.regError.textContent = "Erro ao cadastrar.";
+        elements.regError.classList.remove('hidden');
+      }
+    } catch (err) {
+      elements.regError.textContent = "Erro de conexão.";
+      elements.regError.classList.remove('hidden');
+    }
+  }
+
+  function handleLogout() {
+    localStorage.removeItem(SESSION_KEY);
+    currentUser = null;
+    if (typeof google !== 'undefined' && google.accounts.id) {
+      google.accounts.id.disableAutoSelect();
+    }
+    if (elements.btnAdmin) {
+      elements.btnAdmin.classList.add('hidden');
+    }
+    showAuth();
+  }
+
+  async function loadConfig() {
+    try {
+      const resp = await fetch(`/api/config?email=${encodeURIComponent(currentUser.email)}`);
+      if (resp.ok) {
+        config = await resp.json();
+        // Garantir que arrays existam
+        config.professionals = config.professionals || [];
+        config.services = config.services || [];
+      }
+    } catch (err) {
+      console.error("Erro ao carregar config:", err);
+    }
+  }
+
+  async function saveConfig() {
+    try {
+      await fetch(`/api/config?email=${encodeURIComponent(currentUser.email)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(config)
+      });
+      applyConfig();
+    } catch (err) {
+      console.error("Erro ao salvar config:", err);
+    }
   }
 
   function applyConfig() {
@@ -118,76 +394,92 @@
     if (isPsychology) {
       elements.headerDesc.textContent = 'Organize suas sessões com tranquilidade.';
       elements.therapistLabel.textContent = 'Nome do Psicólogo(a)';
-      elements.therapistInput.placeholder = 'Ex.: Dr. Roberto';
       elements.typeLabel.textContent = 'Tipo de Sessão';
     } else if (isBarber) {
       elements.headerDesc.textContent = 'Gestão ágil para seu negócio.';
       elements.therapistLabel.textContent = 'Nome do Profissional';
-      elements.therapistInput.placeholder = 'Ex.: Mestre Cuca';
       elements.typeLabel.textContent = 'Serviço';
     } else if (isMedical) {
       elements.headerDesc.textContent = 'Controle seus atendimentos clínicos.';
       elements.therapistLabel.textContent = 'Nome do Médico(a)';
-      elements.therapistInput.placeholder = 'Ex.: Dra. Helena';
       elements.typeLabel.textContent = 'Procedimento';
     } else {
       elements.headerDesc.textContent = 'Seus atendimentos organizados, com leveza.';
       elements.therapistLabel.textContent = 'Nome do Profissional';
-      elements.therapistInput.placeholder = 'Ex.: Ana Souza';
       elements.typeLabel.textContent = 'Tipo de Serviço';
     }
 
-    // Atualizar select de tipos de serviço no modal
+    // Atualizar select de profissionais no filtro
+    const currentFilterProfessional = elements.filterProfessional.value;
+    elements.filterProfessional.innerHTML = '<option value="all">Todos</option>' + (config.professionals || []).map(p => 
+      `<option value="${p}">${p}</option>`
+    ).join('');
+    
+    if (config.professionals && config.professionals.includes(currentFilterProfessional)) {
+      elements.filterProfessional.value = currentFilterProfessional;
+    } else {
+      elements.filterProfessional.value = 'all';
+    }
+
+    // Atualizar select de profissionais no modal de agendamento
+    const currentTherapist = elements.inputTherapist.value;
+    elements.inputTherapist.innerHTML = (config.professionals || []).map(p => 
+      `<option value="${p}">${p}</option>`
+    ).join('');
+    
+    if (config.professionals && config.professionals.includes(currentTherapist)) {
+      elements.inputTherapist.value = currentTherapist;
+    } else if (config.professionals && config.professionals.length > 0) {
+      elements.inputTherapist.value = config.professionals[0];
+    }
+
+    // Atualizar select de tipos de serviço no modal de agendamento
     const currentType = elements.inputType.value;
-    elements.inputType.innerHTML = config.services.map(s => 
+    elements.inputType.innerHTML = (config.services || []).map(s => 
       `<option value="${s.name}" data-value="${s.value}" data-duration="${s.duration}">${s.name} - ${formatBRL(s.value)} (${s.duration} min)</option>`
     ).join('');
     
     // Tentar manter o valor selecionado ou pegar o primeiro
-    if (config.services.some(s => s.name === currentType)) {
+    if (config.services && Array.isArray(config.services) && config.services.some(s => s.name === currentType)) {
       elements.inputType.value = currentType;
-    } else if (config.services.length > 0) {
+    } else if (config.services && Array.isArray(config.services) && config.services.length > 0) {
       elements.inputType.value = config.services[0].name;
       elements.inputValue.value = config.services[0].value.toFixed(2).replace('.', ',');
       elements.inputDuration.value = config.services[0].duration;
     }
   }
 
-  function loadData() {
-    const data = localStorage.getItem(STORAGE_KEY);
-    if (data) {
-      appointments = JSON.parse(data).map(app => ({
-        ...app,
-        pago: app.pago ?? false // Migração para registros antigos
-      }));
-    } else {
-      // Migração da chave antiga se existir
-      const oldData = localStorage.getItem(OLD_STORAGE_KEY);
-      if (oldData) {
-        appointments = JSON.parse(oldData).map(app => ({
-          id: app.id.toString(),
-          paciente: app.patientName,
-          massoterapeuta: app.therapistName,
-          tipo: app.massageType,
-          valor: app.sessionValue,
-          dataHora: app.dateTime,
-          pago: false
-        }));
-        saveData();
+  async function loadData() {
+    try {
+      const resp = await fetch(`/api/appointments?email=${encodeURIComponent(currentUser.email)}`);
+      if (resp.ok) {
+        const data = await resp.json();
+        appointments = data || [];
       }
+    } catch (err) {
+      console.error("Erro ao carregar dados:", err);
     }
   }
 
-  function saveData() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(appointments));
-    updateFinanceSummary();
+  async function saveData() {
+    try {
+      await fetch(`/api/appointments?email=${encodeURIComponent(currentUser.email)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(appointments)
+      });
+      updateFinanceSummary();
+    } catch (err) {
+      console.error("Erro ao salvar dados:", err);
+    }
   }
 
   // --- Lógica de Negócio ---
 
   function updateFinanceSummary() {
-    const received = appointments.filter(a => a.pago).reduce((sum, a) => sum + a.valor, 0);
-    const pending = appointments.filter(a => !a.pago).reduce((sum, a) => sum + a.valor, 0);
+    const apps = appointments || [];
+    const received = apps.filter(a => a.pago).reduce((sum, a) => sum + a.valor, 0);
+    const pending = apps.filter(a => !a.pago).reduce((sum, a) => sum + a.valor, 0);
     elements.totalReceived.textContent = formatBRL(received);
     elements.totalPending.textContent = formatBRL(pending);
   }
@@ -226,12 +518,14 @@
     
     const therapist = elements.inputTherapist.value.trim().toLowerCase();
     const conflicts = [];
+    const apps = appointments || [];
 
     newApps.forEach(newApp => {
       const startTime = new Date(newApp.dataHora).getTime();
       const endTime = startTime + (newApp.duracao * 60000);
 
-      const match = appointments.find(oldApp => {
+      const match = apps.find(oldApp => {
+        if (!oldApp.massoterapeuta) return false;
         if (oldApp.massoterapeuta.trim().toLowerCase() !== therapist) return false;
         
         const oldStartTime = new Date(oldApp.dataHora).getTime();
@@ -278,6 +572,13 @@
   // --- Handlers de Eventos ---
 
   function setupEventListeners() {
+    // Auth listeners
+    elements.goToRegister.onclick = (e) => { e.preventDefault(); showRegister(); };
+    elements.goToLogin.onclick = (e) => { e.preventDefault(); showLogin(); };
+    elements.loginForm.onsubmit = handleLogin;
+    elements.registerForm.onsubmit = handleRegister;
+    elements.btnLogout.onclick = handleLogout;
+
     elements.btnNewAppointment.onclick = openModal;
     elements.closeModal.onclick = closeModal;
     elements.modalOverlay.onclick = (e) => { if (e.target === elements.modalOverlay) closeModal(); };
@@ -315,7 +616,13 @@
     elements.closeSettings.onclick = closeSettings;
     elements.settingsOverlay.onclick = (e) => { if (e.target === elements.settingsOverlay) closeSettings(); };
     elements.btnAddService.onclick = () => addServiceRow();
+    elements.btnAddProfessional.onclick = () => addProfessionalRow();
     elements.settingsForm.onsubmit = handleSettingsSubmit;
+
+    // Admin
+    elements.btnAdmin.onclick = openAdmin;
+    elements.closeAdmin.onclick = closeAdmin;
+    elements.adminOverlay.onclick = (e) => { if (e.target === elements.adminOverlay) closeAdmin(); };
 
     // Atualizar valor e duração ao trocar o tipo de serviço no agendamento
     elements.inputType.onchange = () => {
@@ -334,9 +641,11 @@
     // Filtros
     elements.filterWhen.onchange = render;
     elements.filterPayment.onchange = render;
+    elements.filterProfessional.onchange = render;
     elements.btnClearFilters.onclick = () => {
       elements.filterWhen.value = 'all';
       elements.filterPayment.value = 'all';
+      elements.filterProfessional.value = 'all';
       render();
     };
 
@@ -367,7 +676,7 @@
     render();
   }
 
-  function openModal() {
+  function openModal(editingApp = null) {
     elements.appointmentForm.reset();
     formState.payment = false;
     formState.repeat = 'none';
@@ -377,6 +686,23 @@
     document.querySelectorAll('.toggle-btn').forEach(btn => btn.classList.remove('active'));
     document.getElementById('pay-false').classList.add('active');
     document.querySelector('[data-repeat="none"]').classList.add('active');
+    
+    if (editingApp) {
+        // Lógica de edição se existir
+    } else {
+        // Se for novo, garante que o primeiro serviço da config seja selecionado e preencha valor/duração
+        if (config.services && config.services.length > 0) {
+            const firstService = config.services[0];
+            elements.inputType.value = firstService.name;
+            elements.inputValue.value = firstService.value.toFixed(2).replace('.', ',');
+            elements.inputDuration.value = firstService.duration;
+        } else {
+            // Caso não tenha serviços cadastrados
+            elements.inputValue.value = '';
+            elements.inputDuration.value = '';
+        }
+    }
+
     elements.modalOverlay.classList.remove('hidden');
     validateForm();
   }
@@ -387,14 +713,129 @@
 
   function openSettings() {
     elements.configBusinessType.value = config.businessType;
+    
+    elements.professionalsList.innerHTML = '';
+    (config.professionals || []).forEach(p => addProfessionalRow(p));
+    if (!config.professionals || config.professionals.length === 0) addProfessionalRow(currentUser.name);
+    
     elements.servicesList.innerHTML = '';
     config.services.forEach(s => addServiceRow(s.name, s.value, s.duration));
     if (config.services.length === 0) addServiceRow();
+    
+    updateProfessionalButtons();
     elements.settingsOverlay.classList.remove('hidden');
+  }
+
+  function updateProfessionalButtons() {
+    const rows = elements.professionalsList.querySelectorAll('.service-row');
+    const count = rows.length;
+    
+    if (currentUser.max_professionals && count >= currentUser.max_professionals) {
+      elements.btnAddProfessional.disabled = true;
+      elements.btnAddProfessional.style.opacity = '0.5';
+      elements.multipleProfessionalsWarning.textContent = `O limite de ${currentUser.max_professionals} profissional(is) foi atingido.`;
+      elements.multipleProfessionalsWarning.classList.remove('hidden');
+    } else {
+      elements.btnAddProfessional.disabled = false;
+      elements.btnAddProfessional.style.opacity = '1';
+      elements.multipleProfessionalsWarning.classList.add('hidden');
+    }
+    
+    // Impedir remover se for o único
+    rows.forEach(row => {
+        const btn = row.querySelector('.btn-remove-service');
+        if (count <= 1) {
+            btn.style.display = 'none';
+        } else {
+            btn.style.display = 'block';
+        }
+    });
   }
 
   function closeSettings() {
     elements.settingsOverlay.classList.add('hidden');
+  }
+
+  async function openAdmin() {
+    if (currentUser.role !== 'admin') {
+      alert("Acesso negado: Apenas administradores podem acessar esta área.");
+      return;
+    }
+
+    elements.adminOverlay.classList.remove('hidden');
+    elements.adminUserList.innerHTML = '<tr><td colspan="5" style="text-align:center;">Carregando...</td></tr>';
+    
+    try {
+      const resp = await fetch('/api/admin/users');
+      if (resp.ok) {
+        const users = await resp.json();
+        renderAdminUsers(users);
+      } else {
+        elements.adminUserList.innerHTML = '<tr><td colspan="5" style="text-align:center; color:red;">Erro ao carregar usuários.</td></tr>';
+      }
+    } catch (err) {
+      elements.adminUserList.innerHTML = '<tr><td colspan="5" style="text-align:center; color:red;">Erro de conexão.</td></tr>';
+    }
+  }
+
+  function closeAdmin() {
+    elements.adminOverlay.classList.add('hidden');
+  }
+
+  function renderAdminUsers(users) {
+    if (users.length === 0) {
+      elements.adminUserList.innerHTML = '<tr><td colspan="5" style="text-align:center;">Nenhum usuário encontrado.</td></tr>';
+      return;
+    }
+
+    const now = new Date();
+    elements.adminUserList.innerHTML = users.map(u => {
+      const createdAt = new Date(u.created_at);
+      const diffMs = now - createdAt;
+      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+      const diffHours = Math.floor(diffMs / (1000 * 60 * 60)) % 24;
+      const diffMins = Math.floor(diffMs / (1000 * 60)) % 60;
+
+      let timeText = "";
+      if (diffDays > 0) timeText = `${diffDays}d ${diffHours}h`;
+      else if (diffHours > 0) timeText = `${diffHours}h ${diffMins}m`;
+      else timeText = `${diffMins}m`;
+
+      return `
+        <tr>
+          <td><strong>${u.name}</strong> ${u.role === 'admin' ? '🛡️' : ''}</td>
+          <td>${u.email}</td>
+          <td>${u.business}</td>
+          <td>
+            <input type="number" value="${u.max_professionals || 1}" min="1" max="50" style="width: 50px; padding: 4px; border: 1px solid #ccc; border-radius: 4px;" onchange="window.app.updateUserPermission('${u.email}', this.value)">
+          </td>
+          <td>${createdAt.toLocaleDateString('pt-BR')} ${createdAt.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'})}</td>
+          <td>${timeText}</td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  async function updateUserPermission(email, maxProfs) {
+    try {
+      const resp = await fetch('/api/admin/update-permission', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, max_professionals: parseInt(maxProfs) })
+      });
+      if (!resp.ok) {
+        alert('Erro ao atualizar permissão');
+      } else {
+          // Se for o próprio usuário logado, atualiza o estado local
+          if (currentUser.email === email) {
+              currentUser.max_professionals = parseInt(maxProfs);
+              localStorage.setItem(SESSION_KEY, JSON.stringify(currentUser));
+          }
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Erro de conexão');
+    }
   }
 
   function addServiceRow(name = '', value = '', duration = '') {
@@ -406,12 +847,36 @@
       <input type="number" placeholder="Min" value="${duration}" required style="flex: 0.8;">
       <button type="button" class="btn-remove-service">✕</button>
     `;
-    row.querySelector('.btn-remove-service').onclick = () => row.remove();
+    row.querySelector('.btn-remove-service').onclick = () => {
+        row.remove();
+    };
     elements.servicesList.appendChild(row);
+  }
+
+  function addProfessionalRow(name = '') {
+    const row = document.createElement('div');
+    row.className = 'service-row';
+    row.innerHTML = `
+      <input type="text" placeholder="Nome do Profissional" value="${name}" required style="flex: 1;">
+      <button type="button" class="btn-remove-service">✕</button>
+    `;
+    row.querySelector('.btn-remove-service').onclick = () => {
+        row.remove();
+        updateProfessionalButtons();
+    };
+    elements.professionalsList.appendChild(row);
+    updateProfessionalButtons();
   }
 
   function handleSettingsSubmit(e) {
     e.preventDefault();
+    
+    const profRows = elements.professionalsList.querySelectorAll('.service-row');
+    const newProfessionals = [];
+    profRows.forEach(row => {
+      newProfessionals.push(row.querySelector('input').value);
+    });
+
     const rows = elements.servicesList.querySelectorAll('.service-row');
     const newServices = [];
     rows.forEach(row => {
@@ -424,6 +889,7 @@
     });
 
     config.businessType = elements.configBusinessType.value;
+    config.professionals = newProfessionals;
     config.services = newServices;
     
     saveConfig();
@@ -559,9 +1025,9 @@
     `;
   }
 
-  function deleteSession(id) {
+  async function deleteSession(id) {
     appointments = appointments.filter(a => a.id !== id);
-    saveData();
+    await saveData();
     render();
   }
 
@@ -589,12 +1055,14 @@
   function renderList() {
     const when = elements.filterWhen.value;
     const payment = elements.filterPayment.value;
+    const professional = elements.filterProfessional.value;
     const now = new Date().getTime();
+    const apps = appointments || [];
 
     // Atualizar labels na lista se necessário
     const therapistIcon = config.businessType.toLowerCase().includes('psic') ? '👤' : '🤲';
 
-    let filtered = appointments.filter(app => {
+    let filtered = apps.filter(app => {
       let matchWhen = true;
       if (when === 'upcoming') matchWhen = new Date(app.dataHora).getTime() >= now;
       
@@ -602,15 +1070,18 @@
       if (payment === 'paid') matchPayment = app.pago;
       if (payment === 'unpaid') matchPayment = !app.pago;
       
-      return matchWhen && matchPayment;
+      let matchProfessional = true;
+      if (professional !== 'all') matchProfessional = app.massoterapeuta === professional;
+      
+      return matchWhen && matchPayment && matchProfessional;
     });
 
     filtered.sort((a, b) => new Date(a.dataHora) - new Date(b.dataHora));
 
     elements.filterCount.textContent = `${filtered.length} sessões encontradas`;
-    elements.btnClearFilters.classList.toggle('hidden', when === 'all' && payment === 'all');
+    elements.btnClearFilters.classList.toggle('hidden', when === 'all' && payment === 'all' && professional === 'all');
 
-    if (appointments.length === 0) {
+    if (apps.length === 0) {
       elements.listContainer.innerHTML = `
         <div style="text-align: center; padding: 3rem 1rem; color: hsl(var(--muted-foreground));">
           <div style="font-size: 3rem; margin-bottom: 1rem;">🌿</div>
@@ -682,7 +1153,8 @@
       const isToday = dateKey === todayStr;
       const isSelected = selectedDate && selectedDate.getTime() === date.getTime();
       
-      const daySessions = appointments.filter(a => {
+      const apps = appointments || [];
+      const daySessions = apps.filter(a => {
         const d = new Date(a.dataHora);
         return d.getFullYear() === year && d.getMonth() === month && d.getDate() === day;
       });
@@ -740,7 +1212,8 @@
       date.setDate(startOfWeek.getDate() + i);
       const dateKey = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
       
-      const sessions = appointments.filter(a => {
+      const apps = appointments || [];
+      const sessions = apps.filter(a => {
         const d = new Date(a.dataHora);
         return d.getFullYear() === date.getFullYear() && d.getMonth() === date.getMonth() && d.getDate() === date.getDate();
       }).sort((a, b) => new Date(a.dataHora) - new Date(b.dataHora));
@@ -774,7 +1247,8 @@
   function renderDay() {
     elements.calendarTitle.textContent = currentMonth.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' });
     
-    const sessions = appointments.filter(a => {
+    const apps = appointments || [];
+    const sessions = apps.filter(a => {
         const d = new Date(a.dataHora);
         return d.getFullYear() === currentMonth.getFullYear() && d.getMonth() === currentMonth.getMonth() && d.getDate() === currentMonth.getDate();
     }).sort((a, b) => new Date(a.dataHora) - new Date(b.dataHora));
@@ -849,7 +1323,8 @@
     elements.dayDetail.classList.remove('hidden');
     elements.detailDate.textContent = formatDateFull(selectedDate);
     
-    const daySessions = appointments.filter(a => {
+    const apps = appointments || [];
+    const daySessions = apps.filter(a => {
       const d = new Date(a.dataHora);
       return d.getFullYear() === selectedDate.getFullYear() && 
              d.getMonth() === selectedDate.getMonth() && 
@@ -902,7 +1377,8 @@
     deleteSession,
     selectDate,
     render,
-    newAppointmentToday
+    newAppointmentToday,
+    updateUserPermission
   };
 
   init();
