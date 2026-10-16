@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agenda Nobre</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+  <div id="auth-container" class="auth-container">
+    <div id="login-card" class="modal-card">
+      <div class="logo-box">✿</div>
+      <h2>Login</h2>
+      <form id="login-form">
+        <div class="form-group">
+          <label for="login-email">E-mail</label>
+          <input type="email" id="login-email" required>
+        </div>
+        <div class="form-group">
+          <label for="login-password">Senha</label>
+          <input type="password" id="login-password" required>
+        </div>
+        <p id="login-error" class="error-msg hidden">Credenciais inválidas.</p>
+        <button type="submit" class="btn-wide bg-primary shadow-sm">Entrar</button>
+        
+        <div style="margin: 1rem 0; display: flex; align-items: center; gap: 0.5rem; color: hsl(var(--muted-foreground)); font-size: 0.75rem;">
+          <hr style="flex: 1; border: 0; border-top: 1px solid hsl(var(--border));">
+          OU
+          <hr style="flex: 1; border: 0; border-top: 1px solid hsl(var(--border));">
+        </div>
+
+        <div id="google-login-btn" style="display: flex; justify-content: center;"></div>
+        
+
+        <p style="margin-top: 1rem; text-align: center; font-size: 0.875rem;">
+          Não tem conta? <a href="#" id="go-to-register">Cadastre sua empresa</a>
+        </p>
+      </form>
+    </div>
+
+    <div id="register-card" class="modal-card hidden">
+      <div class="logo-box">✿</div>
+      <h2>Cadastro de Empresa</h2>
+      <form id="register-form">
+        <div class="form-group">
+          <label for="reg-name">Nome da Empresa</label>
+          <input type="text" id="reg-name" required>
+        </div>
+        <div class="form-group">
+          <label for="reg-business">Ramo</label>
+          <input type="text" id="reg-business" required placeholder="Ex: Massoterapia">
+        </div>
+        <div class="form-group">
+          <label for="reg-email">E-mail</label>
+          <input type="email" id="reg-email" required>
+        </div>
+        <div class="form-group">
+          <label for="reg-password">Senha</label>
+          <input type="password" id="reg-password" required minlength="6">
+        </div>
+        <p id="reg-error" class="error-msg hidden">E-mail já cadastrado.</p>
+        <button type="submit" class="btn-wide bg-primary shadow-sm">Criar Perfil</button>
+
+        <div style="margin: 1rem 0; display: flex; align-items: center; gap: 0.5rem; color: hsl(var(--muted-foreground)); font-size: 0.75rem;">
+          <hr style="flex: 1; border: 0; border-top: 1px solid hsl(var(--border));">
+          OU
+          <hr style="flex: 1; border: 0; border-top: 1px solid hsl(var(--border));">
+        </div>
+
+        <div id="google-register-btn" style="display: flex; justify-content: center;"></div>
+
+        <p style="margin-top: 1rem; text-align: center; font-size: 0.875rem;">
+          Já tem conta? <a href="#" id="go-to-login">Fazer Login</a>
+        </p>
+      </form>
+    </div>
+  </div>
+
+  <div id="app-content" class="hidden">
+    <div id="success-banner" class="hidden">
+    <span id="success-icon">✓</span>
+    <span id="success-message">Sessões criadas com sucesso!</span>
+  </div>
+
+  <div class="app-container">
+    <div class="top-actions">
+      <button id="btn-admin" class="btn-admin hidden">🛡️ Admin</button>
+      <button id="btn-help" class="btn-icon shadow-sm" title="Ajuda">❓</button>
+      <button id="btn-settings" class="btn-icon shadow-sm" title="Configurações">⚙️</button>
+      <button id="btn-logout" class="btn-icon shadow-sm" title="Sair">🚪 <span style="font-size: 0.75rem; font-weight: 600;">Sair</span></button>
+    </div>
+    <header>
+      <div style="display: flex; justify-content: center; align-items: center; gap: 0.75rem;">
+        <div class="logo-box" style="margin: 0;">✿</div>
+        <h1 id="header-business-title">Agenda</h1>
+      </div>
+      <p id="header-business-desc">Seus atendimentos organizados, com leveza.</p>
+      <p id="user-info" style="font-size: 0.875rem; color: hsl(var(--muted-foreground)); margin-top: 0.5rem;"></p>
+    </header>
+
+    <div class="finance-summary">
+      <div class="finance-card">
+        <span>Recebido</span>
+        <strong id="total-received">R$ 0,00</strong>
+      </div>
+      <div class="finance-card">
+        <span>A receber</span>
+        <strong id="total-pending">R$ 0,00</strong>
+      </div>
+    </div>
+
+    <div style="display: flex; gap: 0.5rem;">
+      <button id="btn-new-appointment" class="btn-wide bg-primary shadow-sm" style="flex: 1;">+ Serviço</button>
+      <button id="btn-new-payment-main" class="btn-wide bg-secondary shadow-sm" style="flex: 1;">+ Pagamento</button>
+    </div>
+
+    <div class="view-switcher">
+      <button id="view-list-btn" class="view-btn active">📋 Lista</button>
+      <button id="view-calendar-btn" class="view-btn">🗓 Calendário</button>
+      <button id="view-payments-btn" class="view-btn hidden">💰 Pagamentos</button>
+    </div>
+
+    <!-- Visão Lista -->
+    <section id="view-list" class="">
+      <div class="filters shadow-sm">
+        <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.5rem;">
+          <div class="form-group" style="flex: 1; min-width: 140px; margin-bottom: 0;">
+            <label>Quando</label>
+            <select id="filter-when">
+              <option value="all">Todas</option>
+              <option value="upcoming">Próximas</option>
+            </select>
+          </div>
+          <div class="form-group" style="flex: 1; min-width: 140px; margin-bottom: 0;">
+            <label>Pagamento</label>
+            <select id="filter-payment">
+              <option value="all">Todos</option>
+              <option value="paid">Pagos</option>
+              <option value="unpaid">Não pagos</option>
+            </select>
+          </div>
+          <div class="form-group" style="flex: 1; min-width: 140px; margin-bottom: 0;">
+            <label>Profissional</label>
+            <select id="filter-professional">
+              <option value="all">Todos</option>
+            </select>
+          </div>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.875rem;">
+          <span id="filter-count" class="text-muted-foreground">0 sessões encontradas</span>
+          <button id="btn-clear-filters" class="hidden" style="border: none; background: none; color: hsl(var(--primary)); cursor: pointer; font-weight: 500;">Limpar filtros</button>
+        </div>
+      </div>
+      
+      <div id="list-container">
+        <!-- Cards da lista -->
+      </div>
+    </section>
+
+    <!-- Visão Calendário -->
+    <section id="view-calendar" class="hidden">
+      <div class="calendar-controls shadow-sm" style="background: white; padding: 0.5rem; border-radius: 0.75rem; margin-bottom: 1rem;">
+        <div style="display: flex; justify-content: center; gap: 0.25rem;">
+          <button id="cal-view-month" class="view-btn-sm active">Mês</button>
+          <button id="cal-view-week" class="view-btn-sm">Semana</button>
+          <button id="cal-view-day" class="view-btn-sm">Dia</button>
+        </div>
+      </div>
+
+      <div class="calendar-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <h2 id="calendar-title" style="font-size: 1.25rem;">Outubro de 2026</h2>
+        <div>
+          <button id="prev-period" style="padding: 0.5rem; background: none; border: none; font-size: 1.25rem; cursor: pointer;">‹</button>
+          <button id="next-period" style="padding: 0.5rem; background: none; border: none; font-size: 1.25rem; cursor: pointer;">›</button>
+        </div>
+      </div>
+      
+      <div id="calendar-view-container">
+        <!-- O conteúdo será gerado dinamicamente via JS -->
+      </div>
+      
+      <div class="legend">
+        <div class="legend-item"><span class="dot paid"></span> Pago</div>
+        <div class="legend-item"><span class="dot unpaid"></span> Não pago</div>
+      </div>
+
+      <div id="day-detail" class="hidden" style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid hsl(var(--border));">
+        <h3 id="detail-date" style="font-size: 1rem; margin-bottom: 1rem;">12 de out. de 2026</h3>
+        <div id="detail-sessions">
+          <!-- Sessões do dia -->
+        </div>
+      </div>
+    </section>
+
+    <!-- Visão Pagamentos (Admin) -->
+    <section id="view-payments" class="hidden">
+      <div class="filters shadow-sm">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+          <h3 style="font-size: 0.875rem; font-weight: 600;">Agendamentos de Pagamento</h3>
+          <button id="btn-payment-history-main" style="border: none; background: none; color: hsl(var(--primary)); cursor: pointer; font-size: 0.75rem;">Ver Histórico</button>
+        </div>
+        <div style="font-size: 0.75rem; color: hsl(var(--muted-foreground));">
+          Acompanhe os pagamentos das empresas cadastradas.
+        </div>
+      </div>
+      <div id="payment-list-container">
+        <!-- Preenchido via JS -->
+      </div>
+    </section>
+  </div>
+
+  <!-- Modal de Agendamento -->
+  <div id="modal-overlay" class="modal-overlay hidden">
+    <div class="modal-card">
+      <span id="close-modal" class="close-x">✕</span>
+      <h2 style="margin-bottom: 1.5rem; font-size: 1.25rem;">Novo Agendamento</h2>
+      
+      <form id="appointment-form">
+        <div class="form-group">
+          <label for="patient">Nome do Cliente</label>
+          <input type="text" id="patient" required placeholder="Ex.: Maria Silva">
+        </div>
+        <div class="form-group">
+          <label for="therapist">Nome do Profissional</label>
+          <select id="therapist" required>
+            <!-- Opções dinâmicas -->
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="type">Tipo de Serviço</label>
+          <select id="type" required>
+            <!-- Opções dinâmicas -->
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="value">Valor da Sessão (R$)</label>
+          <input type="text" id="value" required placeholder="150,00">
+        </div>
+        <div class="form-group">
+          <label for="duration">Duração (minutos)</label>
+          <input type="number" id="duration" required placeholder="60">
+        </div>
+        <div class="form-group">
+          <label for="datetime">Data e Horário</label>
+          <input type="datetime-local" id="datetime" required>
+        </div>
+        
+        <div class="form-group">
+          <label>Pagamento</label>
+          <div class="toggle-group">
+            <button type="button" class="toggle-btn" data-value="true" id="pay-true">✓ Pago</button>
+            <button type="button" class="toggle-btn" data-value="false" id="pay-false">● Não pago</button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Repetir</label>
+          <div class="toggle-group">
+            <button type="button" class="toggle-btn" data-repeat="none">Não repetir</button>
+            <button type="button" class="toggle-btn" data-repeat="weekly">Semanal</button>
+            <button type="button" class="toggle-btn" data-repeat="biweekly">Quinzenal</button>
+            <button type="button" class="toggle-btn" data-repeat="monthly">Mensal</button>
+          </div>
+        </div>
+
+        <div id="repeat-options" class="hidden">
+          <div class="form-group">
+            <label for="repeat-count">Quantas sessões?</label>
+            <input type="number" id="repeat-count" min="2" max="24" value="4">
+          </div>
+          <p id="repeat-info" style="font-size: 0.75rem; color: hsl(var(--muted-foreground)); margin-bottom: 1rem;"></p>
+        </div>
+
+        <div id="conflict-box" class="conflict-box hidden">
+          <h3 id="conflict-title">⚠️ Conflito de horário</h3>
+          <div id="conflict-list" class="conflict-list"></div>
+          <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; cursor: pointer;">
+            <input type="checkbox" id="force-schedule"> Agendar mesmo assim
+          </label>
+        </div>
+
+        <p id="form-error" class="error-msg hidden">Preencha todos os campos corretamente.</p>
+        
+        <button type="submit" id="btn-confirm" class="btn-wide bg-primary shadow-sm">Confirmar Agendamento</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal de Configurações -->
+  <div id="settings-overlay" class="modal-overlay hidden">
+    <div class="modal-card">
+      <span id="close-settings" class="close-x">✕</span>
+      <h2 style="margin-bottom: 1.5rem; font-size: 1.25rem;">Configurações do App</h2>
+      
+      <form id="settings-form">
+        <div class="form-group">
+          <label for="config-business-type">Ramo de Trabalho (ex: Massoterapia, Barbearia, Psicologia)</label>
+          <input type="text" id="config-business-type" required placeholder="Ex.: Massoterapia">
+        </div>
+        
+        <div class="form-group">
+          <label>Profissionais</label>
+          <div id="professionals-list">
+            <!-- Lista dinâmica de profissionais -->
+          </div>
+          <button type="button" id="btn-add-professional" class="btn-wide bg-secondary" style="margin-top: 0.5rem; padding: 0.5rem;">+ Adicionar Profissional</button>
+          <p id="multiple-professionals-warning" class="hidden" style="font-size: 0.75rem; color: hsl(var(--destructive)); margin-top: 0.5rem;">O cadastro de múltiplos profissionais está bloqueado pelo administrador.</p>
+        </div>
+        
+        <div class="form-group">
+          <label>Serviços, Valores e Duração (min)</label>
+          <div id="services-list">
+            <!-- Lista dinâmica de serviços -->
+          </div>
+          <button type="button" id="btn-add-service" class="btn-wide bg-secondary" style="margin-top: 0.5rem; padding: 0.5rem;">+ Adicionar Serviço</button>
+        </div>
+
+        <div style="margin: 1.5rem 0; border-top: 1px solid hsl(var(--border)); padding-top: 1rem;">
+          <button type="button" id="btn-toggle-security" class="btn-wide bg-secondary shadow-sm" style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 1rem;">
+            <span style="font-weight: 600;">🛡️ Segurança e Conta</span>
+            <span id="security-toggle-icon">▼</span>
+          </button>
+          
+          <div id="security-section" class="hidden" style="margin-top: 1rem; padding: 0.5rem; border: 1px solid hsl(var(--border)); border-radius: 0.5rem;">
+            <div id="google-logged-message" class="hidden" style="padding: 1rem; text-align: center;">
+              <p style="font-weight: 600; color: hsl(var(--primary));">LOGIN COM A CONTA GOOGLE</p>
+              <p style="font-size: 0.75rem; color: hsl(var(--muted-foreground)); margin-top: 0.25rem;">Você está autenticado via Google. As opções de senha e vínculo manual não estão disponíveis.</p>
+            </div>
+            <div id="password-update-section">
+              <div class="form-group">
+                <label for="config-current-password">Senha Atual</label>
+                <input type="password" id="config-current-password" placeholder="Digite a senha atual">
+              </div>
+              <div class="form-group">
+                <label for="config-new-password">Nova Senha</label>
+                <input type="password" id="config-new-password" placeholder="Mínimo 6 caracteres">
+              </div>
+              <div class="form-group">
+                <label for="config-confirm-password">Confirmar Nova Senha</label>
+                <input type="password" id="config-confirm-password" placeholder="Repita a nova senha">
+              </div>
+              <button type="button" id="btn-update-password" class="btn-wide bg-secondary" style="margin-bottom: 1rem;">Atualizar Senha</button>
+            </div>
+  
+            <div id="google-link-section" style="display: flex; flex-direction: column; gap: 0.5rem; margin-top: 1rem; padding: 1rem; background: hsl(var(--muted)); border-radius: 0.5rem;">
+              <p style="font-size: 0.875rem; font-weight: 500;">Vínculo com Google</p>
+              <p id="google-link-status" style="font-size: 0.75rem; color: hsl(var(--muted-foreground));">Sua conta não está vinculada ao Google.</p>
+              <div id="google-link-btn-container">
+                <!-- Botão do Google será renderizado aqui -->
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <button type="submit" id="btn-save-settings" class="btn-wide bg-primary shadow-sm" style="margin-top: 1rem;">Salvar Configurações</button>
+      </form>
+    </div>
+  </div>
+
+  </div> <!-- Fim de app-content -->
+
+  <script src="script.js"></script>
+</body>
+</html>
