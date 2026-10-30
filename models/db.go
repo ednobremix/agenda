@@ -16,7 +16,8 @@ var GORM *gorm.DB
 func InitDB() {
 	dsn := os.Getenv("DATABASE_URL")
 	var err error
-	if dsn != "" {
+	// SQLite é o padrão; PostgreSQL só é usado com DB_DRIVER=postgres
+	if os.Getenv("DB_DRIVER") == "postgres" && dsn != "" {
 		log.Println("Conectando ao PostgreSQL via DATABASE_URL...")
 		GORM, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	} else {
@@ -24,7 +25,7 @@ func InitDB() {
 		if sqliteFile == "" {
 			sqliteFile = "sqlite.db"
 		}
-		log.Printf("DATABASE_URL não definida. Usando SQLite local (%s) como fallback...\n", sqliteFile)
+		log.Printf("Usando SQLite (%s) como fallback...\n", sqliteFile)
 		GORM, err = gorm.Open(sqlite.Open(sqliteFile), &gorm.Config{})
 	}
 
