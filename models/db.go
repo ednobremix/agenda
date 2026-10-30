@@ -20,8 +20,12 @@ func InitDB() {
 		log.Println("Conectando ao PostgreSQL via DATABASE_URL...")
 		GORM, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	} else {
-		log.Println("DATABASE_URL não definida. Usando SQLite local (agenda.db) como fallback...")
-		GORM, err = gorm.Open(sqlite.Open("agenda.db"), &gorm.Config{})
+		sqliteFile := os.Getenv("SQLITE_DB")
+		if sqliteFile == "" {
+			sqliteFile = "sqlite.db"
+		}
+		log.Printf("DATABASE_URL não definida. Usando SQLite local (%s) como fallback...\n", sqliteFile)
+		GORM, err = gorm.Open(sqlite.Open(sqliteFile), &gorm.Config{})
 	}
 
 	if err != nil {
@@ -32,6 +36,11 @@ func InitDB() {
 	DB, err = GORM.DB()
 	if err != nil {
 		log.Fatalf("Failed to get underlying sql.DB: %v", err)
+	}
+
+	// Corrige bancos antigos onde appointments.id foi criado como bigint
+	if GORM.Dialector.Name() == "postgres" {
+		fixAppointmentIDColumn()
 	}
 
 	// Automigrate irá criar as tabelas se elas não existirem e atualizar o esquema
@@ -68,4 +77,22 @@ func seedAdmin() {
 			log.Println("Usuário admin criado com sucesso.")
 		}
 	}
+}
+
+// fixAppointmentIDColumn converte appointments.id de bigint para varchar(100),
+// pois os IDs são gerados no frontend (UUID).
+func fixAppointmentIDColumn() {
+	var dataType string
+	GORM.Raw(`SELECT data_type FROM information_schema.columns
+		WHERE table_schema = current_schema() AND table_name = 'appointments' AND column_name = 'id'`).Scan(&dataType)
+	if dataType != "bigint" && dataType != "integer" {
+		return
+	}
+	err := GORM.Exec(`ALTER TABLE appointments ALTER COLUMN id DROP DEFAULT,
+		ALTER COLUMN id TYPE varchar(100) USING id::text`).Error
+	if err != nil {
+		log.Printf("Erro ao converter appointments.id para varchar: %v", err)
+		return
+	}
+	log.Println("appointments.id convertido de bigint para varchar(100).")
 }
