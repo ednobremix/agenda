@@ -34,6 +34,11 @@ func InitDB() {
 		log.Fatalf("Failed to get underlying sql.DB: %v", err)
 	}
 
+	// Corrige bancos antigos onde appointments.id foi criado como bigint
+	if GORM.Dialector.Name() == "postgres" {
+		fixAppointmentIDColumn()
+	}
+
 	// Automigrate irá criar as tabelas se elas não existirem e atualizar o esquema
 	err = GORM.AutoMigrate(
 		&User{},
@@ -68,4 +73,22 @@ func seedAdmin() {
 			log.Println("Usuário admin criado com sucesso.")
 		}
 	}
+}
+
+// fixAppointmentIDColumn converte appointments.id de bigint para varchar(100),
+// pois os IDs são gerados no frontend (UUID).
+func fixAppointmentIDColumn() {
+	var dataType string
+	GORM.Raw(`SELECT data_type FROM information_schema.columns
+		WHERE table_schema = current_schema() AND table_name = 'appointments' AND column_name = 'id'`).Scan(&dataType)
+	if dataType != "bigint" && dataType != "integer" {
+		return
+	}
+	err := GORM.Exec(`ALTER TABLE appointments ALTER COLUMN id DROP DEFAULT,
+		ALTER COLUMN id TYPE varchar(100) USING id::text`).Error
+	if err != nil {
+		log.Printf("Erro ao converter appointments.id para varchar: %v", err)
+		return
+	}
+	log.Println("appointments.id convertido de bigint para varchar(100).")
 }
