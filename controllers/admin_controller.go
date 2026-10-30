@@ -111,7 +111,7 @@ func HandleDeleteUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if email == "adm@teste.com" {
+	if email == "edynobre@gmail.com" {
 		http.Error(w, "Não é possível excluir o administrador padrão", http.StatusBadRequest)
 		return
 	}

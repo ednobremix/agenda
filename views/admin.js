@@ -126,7 +126,7 @@
           <td data-label="Tempo">${timeText}</td>
           <td data-label="Ações">
             <button class="bg-primary" style="border: none; padding: 4px 8px; border-radius: 4px; color: white; cursor: pointer; font-size: 0.75rem; margin-right: 4px;" onclick="openPaymentForUser('${u.ID}')">Agendar Pagto</button>
-            ${u.email !== currentUser.email && u.email !== 'adm@teste.com' ? `
+            ${u.email !== currentUser.email && u.email !== 'edynobre@gmail.com' ? `
               <button class="bg-destructive" style="border: none; padding: 4px 8px; border-radius: 4px; color: white; cursor: pointer; font-size: 0.75rem;" onclick="deleteUser('${u.email}')">Excluir</button>
             ` : ''}
           </td>

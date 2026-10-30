@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"massage-scheduler/models"
+	"massage-scheduler/utils"
 	"net/http"
 	"strings"
 )
@@ -24,6 +25,9 @@ func HandleRegister(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	// Enviar notificação para o admin
+	go utils.SendAdminNotification(u)
 
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(u)
@@ -112,6 +116,8 @@ func HandleGoogleAuth(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
+			// Enviar notificação para o admin
+			go utils.SendAdminNotification(u)
 		}
 	}
 

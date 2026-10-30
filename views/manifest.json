@@ -1,0 +1,17 @@
+{
+  "name": "Agenda Nobre",
+  "short_name": "Agenda",
+  "description": "Seus atendimentos organizados, com leveza.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f7f9f8",
+  "theme_color": "#4a7c59",
+  "icons": [
+    {
+      "src": "https://img.icons8.com/ios-filled/512/4a7c59/flower-doodle.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
