@@ -37,6 +37,10 @@ func HandleSaveAppointments(w http.ResponseWriter, r *http.Request) {
 			return err
 		}
 
+		if user.Role != "admin" && !user.HasAgenda {
+			return errors.New("acesso negado ao App Agenda")
+		}
+
 		if !user.FreeScheduling {
 			// Agrupar novos agendamentos por data (YYYY-MM-DD)
 			newAppsByDate := make(map[string]int)

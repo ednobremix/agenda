@@ -5,49 +5,72 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Portal Nobre</title>
   <link rel="stylesheet" href="style.css">
-  <link rel="manifest" href="manifest.json">
+  <link rel="manifest" href="/manifest.json">
   <meta name="theme-color" content="#4a7c59">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="agenda">
+  <link rel="apple-touch-icon" href="assets/logo.png">
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body class="home-body">
   <div class="home-container">
     <div id="user-bar" class="top-actions hidden">
       <span id="user-name" style="font-size: 0.875rem; font-weight: 500;"></span>
-      <button onclick="handleHomeLogout()" class="btn-icon" title="Sair">🚪 Sair</button>
+    </div>
+
+    <div class="top-actions-left">
+      <button onclick="clearCache()" class="btn-icon" title="Limpar Cache">🧹 Limpar Cache</button>
     </div>
 
     <header>
-      <div class="logo-box">✿</div>
+      <div class="logo-box">
+        <img src="assets/logo.png" alt="Logo Portal Nobre">
+      </div>
       <h1>Portal Nobre</h1>
       <p>Selecione o aplicativo que deseja acessar</p>
+
     </header>
 
     <main class="app-grid">
-      <a href="/agenda.html" id="app-agenda" class="app-card shadow-sm">
-        <div class="app-icon">📅</div>
-        <div class="app-info">
-          <h3>Agenda Nobre</h3>
-          <p>Gestão de atendimentos e pagamentos.</p>
-          <span class="access-status text-muted-foreground" style="font-size: 0.7rem;"></span>
-        </div>
-        <div class="app-arrow">→</div>
-      </a>
+      <div class="app-card-container">
+        <a href="/agenda/login.html" id="app-agenda" class="app-card shadow-sm">
+          <div class="app-icon">📅</div>
+          <div class="app-info">
+            <h3>Agenda de Serviços</h3>
+            <p>Gestão de atendimentos e pagamentos.</p>
+            <span class="access-status text-muted-foreground" style="font-size: 0.7rem;"></span>
+          </div>
+          <div class="app-arrow">→</div>
+        </a>
+        <a href="/agenda/ajuda.html" class="app-help-link">Como funciona? ❓</a>
+      </div>
 
-      <a href="/financeiro/" id="app-financeiro" class="app-card shadow-sm">
-        <div class="app-icon">💰</div>
-        <div class="app-info">
-          <h3>Financeiro</h3>
-          <p>Controle financeiro pessoal.</p>
-          <span class="access-status text-muted-foreground" style="font-size: 0.7rem;"></span>
-        </div>
-        <div class="app-arrow">→</div>
-      </a>
+      <div class="app-card-container">
+        <a href="/financeiro/login.html" id="app-financeiro" class="app-card shadow-sm">
+          <div class="app-icon">💰</div>
+          <div class="app-info">
+            <h3>Financeiro</h3>
+            <p>Controle financeiro pessoal.</p>
+            <span class="access-status text-muted-foreground" style="font-size: 0.7rem;"></span>
+          </div>
+          <div class="app-arrow">→</div>
+        </a>
+        <a href="/financeiro/ajuda.html" class="app-help-link">Como funciona? ❓</a>
+      </div>
 
-      <div class="app-card shadow-sm disabled">
-        <div class="app-icon">📦</div>
-        <div class="app-info">
-          <h3>Estoque</h3>
-          <p>Gestão de produtos e insumos (Em breve).</p>
-        </div>
+      <div class="app-card-container">
+        <a href="/estoque/login.html" id="app-estoque" class="app-card shadow-sm">
+          <div class="app-icon">📦</div>
+          <div class="app-info">
+            <h3>Estoque</h3>
+            <p>Controle de produtos e estoque.</p>
+            <span class="access-status text-muted-foreground" style="font-size: 0.7rem;"></span>
+          </div>
+          <div class="app-arrow">→</div>
+        </a>
+        <a href="/estoque/ajuda.html" class="app-help-link">Como funciona? ❓</a>
       </div>
     </main>
 
@@ -56,5 +79,14 @@
     </footer>
   </div>
   <script src="home.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then(reg => console.log('Service Worker registrado!', reg))
+          .catch(err => console.log('Falha ao registrar Service Worker:', err));
+      });
+    }
+  </script>
 </body>
 </html>
