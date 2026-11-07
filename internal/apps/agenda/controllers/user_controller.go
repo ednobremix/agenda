@@ -13,27 +13,7 @@ import (
 )
 
 func HandleRegister(w http.ResponseWriter, r *http.Request) {
-	var u common_models.User
-	if err := json.NewDecoder(r.Body).Decode(&u); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	u.Role = "user"
-	if err := common_models.GORM.Create(&u).Error; err != nil {
-		if strings.Contains(err.Error(), "UNIQUE constraint failed") || strings.Contains(err.Error(), "duplicate key") {
-			http.Error(w, "E-mail ou Usuário já cadastrado", http.StatusConflict)
-			return
-		}
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	// Enviar notificação para o admin
-	go common_utils.SendAdminNotification(u)
-
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(u)
+	http.Error(w, "O cadastro manual está desativado. Utilize o login via Google na página inicial.", http.StatusForbidden)
 }
 
 func HandleLogin(w http.ResponseWriter, r *http.Request) {
@@ -47,8 +27,8 @@ func HandleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var u common_models.User
-	err := common_models.GORM.Where("email = ? AND password = ?", credentials.Email, credentials.Password).First(&u).Error
-	if err != nil {
+	err := common_models.GORM.Where("email = ?", credentials.Email).First(&u).Error
+	if err != nil || u.Password != credentials.Password {
 		http.Error(w, "Credenciais inválidas", http.StatusUnauthorized)
 		return
 	}

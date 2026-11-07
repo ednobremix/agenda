@@ -155,15 +155,13 @@
 
     gisInited = true;
 
-    google.accounts.id.renderButton(
-      document.getElementById("google-login-btn"),
-      { theme: "outline", size: "large", width: 300 }
-    );
-
-    google.accounts.id.renderButton(
-      document.getElementById("google-register-btn"),
-      { theme: "outline", size: "large", width: 300 }
-    );
+    const btn = document.getElementById("google-login-btn");
+    if (btn) {
+      google.accounts.id.renderButton(
+        btn,
+        { theme: "outline", size: "large", width: 300 }
+      );
+    }
   }
 
   async function handleCredentialResponse(response) {
@@ -190,6 +188,9 @@
         if (freshUserResp.ok) {
           currentUser = await freshUserResp.json();
           localStorage.setItem(SESSION_KEY, JSON.stringify(currentUser));
+          localStorage.setItem('role', currentUser.role); // Salva a role para a Home
+          localStorage.setItem('has_agenda', currentUser.has_agenda);
+          localStorage.setItem('has_financeiro', currentUser.has_financeiro);
           renderGoogleLinkButton();
           // Feedback visual imediato na seção de segurança
           if (elements.googleLinkStatus) {
@@ -203,6 +204,20 @@
         const user = await resp.json();
         currentUser = user;
         localStorage.setItem(SESSION_KEY, JSON.stringify(currentUser));
+        localStorage.setItem('financeiro_user', JSON.stringify(currentUser)); // Sincroniza com Financeiro
+        localStorage.setItem('role', currentUser.role); // Salva a role para a Home
+        localStorage.setItem('has_agenda', currentUser.has_agenda);
+        localStorage.setItem('has_financeiro', currentUser.has_financeiro);
+
+        const isAdmin = currentUser && currentUser.role === 'admin';
+        const hasAgenda = isAdmin || currentUser.has_agenda;
+        
+        if (!hasAgenda) {
+          alert("Acesso negado. Esta conta não possui permissão para o App Agenda.");
+          location.href = '/';
+          return;
+        }
+
         showApp();
       }
     } catch (err) {
@@ -222,6 +237,9 @@
           const freshUser = await resp.json();
           currentUser = freshUser;
           localStorage.setItem(SESSION_KEY, JSON.stringify(currentUser));
+          localStorage.setItem('role', currentUser.role); // Salva a role para a Home
+          localStorage.setItem('has_agenda', currentUser.has_agenda);
+          localStorage.setItem('has_financeiro', currentUser.has_financeiro);
         }
       } catch (err) {
         console.error("Erro ao revalidar sessão:", err);
@@ -241,7 +259,16 @@
   async function showApp() {
     elements.authContainer.classList.add('hidden');
     elements.appContent.classList.remove('hidden');
-    
+
+    const isAdmin = currentUser && currentUser.role === 'admin';
+    const hasAgenda = isAdmin || (currentUser && currentUser.has_agenda);
+
+    if (!hasAgenda) {
+      alert("Você não tem permissão para acessar o App Agenda. Entre em contato com o administrador.");
+      window.location.href = '/';
+      return;
+    }
+
     // Reset state before loading new user data
     appointments = [];
     config = {
@@ -296,16 +323,9 @@
 
   function showLogin() {
     elements.loginCard.classList.remove('hidden');
-    elements.registerCard.classList.add('hidden');
     elements.loginError.classList.add('hidden');
   }
 
-
-  function showRegister() {
-    elements.loginCard.classList.add('hidden');
-    elements.registerCard.classList.remove('hidden');
-    elements.regError.classList.add('hidden');
-  }
 
   async function handleLogin(e) {
     e.preventDefault();
@@ -323,6 +343,8 @@
         const user = await resp.json();
         currentUser = user;
         localStorage.setItem(SESSION_KEY, JSON.stringify(user));
+        localStorage.setItem('financeiro_user', JSON.stringify(user)); // Sincroniza com Financeiro
+        localStorage.setItem('role', user.role); // Salva a role para a Home
         await showApp();
         elements.loginForm.reset();
       } else {
@@ -334,42 +356,12 @@
     }
   }
 
-  async function handleRegister(e) {
-    e.preventDefault();
-    const name = document.getElementById('reg-name').value;
-    const business = document.getElementById('reg-business').value;
-    const email = document.getElementById('reg-email').value;
-    const password = document.getElementById('reg-password').value;
-
-    try {
-      const resp = await fetch('/api/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, business, email, password })
-      });
-
-      if (resp.ok) {
-        const newUser = await resp.json();
-        // Auto login after register
-        currentUser = newUser;
-        localStorage.setItem(SESSION_KEY, JSON.stringify(newUser));
-        await showApp();
-        elements.registerForm.reset();
-      } else if (resp.status === 409) {
-        elements.regError.textContent = "E-mail já cadastrado.";
-        elements.regError.classList.remove('hidden');
-      } else {
-        elements.regError.textContent = "Erro ao cadastrar.";
-        elements.regError.classList.remove('hidden');
-      }
-    } catch (err) {
-      elements.regError.textContent = "Erro de conexão.";
-      elements.regError.classList.remove('hidden');
-    }
-  }
-
   function handleLogout() {
     localStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem('financeiro_user');
+    localStorage.removeItem('role');
+    localStorage.removeItem('has_agenda');
+    localStorage.removeItem('has_financeiro');
     currentUser = null;
     if (typeof google !== 'undefined' && google.accounts.id) {
       google.accounts.id.disableAutoSelect();
@@ -636,10 +628,7 @@
 
   function setupEventListeners() {
     // Auth listeners
-    elements.goToRegister.onclick = (e) => { e.preventDefault(); showRegister(); };
-    elements.goToLogin.onclick = (e) => { e.preventDefault(); showLogin(); };
-    elements.loginForm.onsubmit = handleLogin;
-    elements.registerForm.onsubmit = handleRegister;
+    if (elements.loginForm) elements.loginForm.onsubmit = handleLogin;
     elements.btnLogout.onclick = handleLogout;
 
     elements.btnNewAppointment.onclick = () => openModal();

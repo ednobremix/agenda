@@ -8,6 +8,8 @@
     adminViewUsers: document.getElementById('admin-view-users'),
     adminViewPayments: document.getElementById('admin-view-payments'),
     adminUserList: document.getElementById('admin-user-list'),
+    userCount: document.getElementById('user-count'),
+    filterApp: document.getElementById('filter-app'),
     adminPaymentList: document.getElementById('admin-payment-list'),
     btnNewPayment: document.getElementById('btn-new-payment'),
     btnPaymentHistory: document.getElementById('btn-payment-history'),
@@ -47,6 +49,11 @@
   function setupEventListeners() {
     elements.adminTabUsers.onclick = () => switchAdminTab('users');
     elements.adminTabPayments.onclick = () => switchAdminTab('payments');
+    if (elements.filterApp) {
+      elements.filterApp.onchange = () => {
+        loadAdminUsers();
+      };
+    }
     elements.btnNewPayment.onclick = () => openPaymentModal();
     elements.btnPaymentHistory.onclick = () => {
         const history = !elements.btnPaymentHistory.getAttribute('data-history');
@@ -61,6 +68,8 @@
 
   function handleLogout() {
     localStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem('financeiro_user');
+    localStorage.removeItem('role');
     window.location.href = '/agenda.html';
   }
 
@@ -78,23 +87,43 @@
   }
 
   async function loadAdminUsers() {
-    elements.adminUserList.innerHTML = '<tr><td colspan="8" style="text-align:center;">Carregando...</td></tr>';
+    const colspan = 9;
+    elements.adminUserList.innerHTML = `<tr><td colspan="${colspan}" style="text-align:center;">Carregando...</td></tr>`;
     try {
       const resp = await fetch('/api/admin/users');
       if (resp.ok) {
-        const users = await resp.json();
-        renderAdminUsers(users);
+        let allUsers = await resp.json();
+        let filteredUsers = allUsers;
+        
+        // Aplicar filtro se existir
+        if (elements.filterApp) {
+          const filter = elements.filterApp.value;
+          if (filter === 'agenda') {
+            filteredUsers = allUsers.filter(u => u.has_agenda);
+          } else if (filter === 'financeiro') {
+            filteredUsers = allUsers.filter(u => u.has_financeiro);
+          } else if (filter === 'both') {
+            filteredUsers = allUsers.filter(u => u.has_agenda && u.has_financeiro);
+          }
+        }
+
+        if (elements.userCount) {
+          elements.userCount.innerText = filteredUsers.length;
+        }
+
+        renderAdminUsers(filteredUsers);
       } else {
-        elements.adminUserList.innerHTML = '<tr><td colspan="8" style="text-align:center; color:red;">Erro ao carregar usuários.</td></tr>';
+        elements.adminUserList.innerHTML = `<tr><td colspan="${colspan}" style="text-align:center; color:red;">Erro ao carregar usuários.</td></tr>`;
       }
     } catch (err) {
-      elements.adminUserList.innerHTML = '<tr><td colspan="8" style="text-align:center; color:red;">Erro de conexão.</td></tr>';
+      elements.adminUserList.innerHTML = `<tr><td colspan="${colspan}" style="text-align:center; color:red;">Erro de conexão.</td></tr>`;
     }
   }
 
   function renderAdminUsers(users) {
+    const colspan = 9;
     if (users.length === 0) {
-      elements.adminUserList.innerHTML = '<tr><td colspan="8" style="text-align:center;">Nenhum usuário encontrado.</td></tr>';
+      elements.adminUserList.innerHTML = `<tr><td colspan="${colspan}" style="text-align:center;">Nenhum usuário encontrado.</td></tr>`;
       return;
     }
 
@@ -115,7 +144,19 @@
         <tr>
           <td data-label="Nome"><strong>${u.name}</strong> ${u.role === 'admin' ? '🛡️' : ''}</td>
           <td data-label="E-mail">${u.email}</td>
-          <td data-label="Empresa/Ramo">${u.business}</td>
+          <td data-label="Acessos">
+            <div style="display: flex; gap: 8px; align-items: center;">
+              <label title="Acesso Agenda" style="cursor: pointer; display: flex; align-items: center; gap: 2px;">
+                <input type="checkbox" ${u.has_agenda ? 'checked' : ''} onchange="toggleUserAccess('${u.email}', this.checked, ${u.has_financeiro})">
+                📅
+              </label>
+              <label title="Acesso Financeiro" style="cursor: pointer; display: flex; align-items: center; gap: 2px;">
+                <input type="checkbox" ${u.has_financeiro ? 'checked' : ''} onchange="toggleUserAccess('${u.email}', ${u.has_agenda}, this.checked)">
+                💰
+              </label>
+            </div>
+          </td>
+          <td data-label="Empresa/Ramo">${u.business || ''}</td>
           <td data-label="Qtd. Prof.">
             <input type="number" value="${u.max_professionals || 1}" min="1" max="50" style="width: 50px; padding: 4px; border: 1px solid #ccc; border-radius: 4px;" onchange="updateUserPermission('${u.email}', this.value, ${u.free_scheduling})">
           </td>
@@ -125,7 +166,7 @@
           <td data-label="Cadastro">${createdAt.toLocaleDateString('pt-BR')} ${createdAt.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'})}</td>
           <td data-label="Tempo">${timeText}</td>
           <td data-label="Ações">
-            <button class="bg-primary" style="border: none; padding: 4px 8px; border-radius: 4px; color: white; cursor: pointer; font-size: 0.75rem; margin-right: 4px;" onclick="openPaymentForUser('${u.ID}')">Agendar Pagto</button>
+            <button class="bg-primary" style="border: none; padding: 4px 8px; border-radius: 4px; color: white; cursor: pointer; font-size: 0.75rem; margin-right: 4px;" onclick="openPaymentForUser('${u.ID || u.id}')">Agendar Pagto</button>
             ${u.email !== currentUser.email && u.email !== 'edynobre@gmail.com' ? `
               <button class="bg-destructive" style="border: none; padding: 4px 8px; border-radius: 4px; color: white; cursor: pointer; font-size: 0.75rem;" onclick="deleteUser('${u.email}')">Excluir</button>
             ` : ''}
@@ -134,6 +175,30 @@
       `;
     }).join('');
   }
+
+  window.toggleUserAccess = async function(email, hasAgenda, hasFinanceiro) {
+    try {
+      const resp = await fetch('/api/admin/update-access', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          email, 
+          has_agenda: !!hasAgenda,
+          has_financeiro: !!hasFinanceiro
+        })
+      });
+      if (resp.ok) {
+        loadAdminUsers();
+      } else {
+        alert('Erro ao atualizar acesso');
+        loadAdminUsers();
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Erro de conexão');
+      loadAdminUsers();
+    }
+  };
 
   window.updateUserPermission = async function(email, maxProfs, freeScheduling) {
     try {

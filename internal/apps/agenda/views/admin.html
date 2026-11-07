@@ -49,12 +49,27 @@
       </div>
 
       <div id="admin-view-users">
+        <div style="margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+          <div style="display: flex; gap: 0.5rem; align-items: center;">
+            <label for="filter-app" style="font-weight: 600;">Filtrar por App:</label>
+            <select id="filter-app" style="padding: 0.5rem; border-radius: 0.5rem; border: 1px solid #ddd;">
+              <option value="all">Todos</option>
+              <option value="agenda">Agenda Nobre</option>
+              <option value="financeiro">Financeiro Nobre</option>
+              <option value="both">Ambos</option>
+            </select>
+          </div>
+          <div style="background: hsl(var(--primary)); color: white; padding: 0.5rem 1rem; border-radius: 2rem; font-weight: 600; font-size: 0.875rem;">
+            Total: <span id="user-count">0</span> usuários
+          </div>
+        </div>
         <div class="admin-table-container">
           <table class="admin-table">
             <thead>
               <tr>
                 <th>Nome</th>
                 <th>E-mail</th>
+                <th>Acessos</th>
                 <th>Empresa/Ramo</th>
                 <th>Qtd. Prof.</th>
                 <th>Agend. Livre</th>
