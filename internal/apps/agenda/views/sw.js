@@ -1,7 +1,7 @@
 const CACHE_NAME = 'agenda-nobre-v1';
 const ASSETS = [
   '/',
-  '/index.html',
+  '/agenda.html',
   '/style.css',
   '/script.js',
   '/manifest.json'

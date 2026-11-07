@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Financeiro Nobre</title>
+  <link rel="stylesheet" href="/agenda/style.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app-content" class="app-container">
+    <div class="top-actions">
+      <a href="/" class="btn-icon shadow-sm" title="Voltar ao Portal">🏠</a>
+      <a href="ajuda.html" class="btn-icon shadow-sm" title="Ajuda">❓</a>
+      <a href="admin.html" id="admin-link" class="btn-icon shadow-sm hidden" title="Administração">🛡️</a>
+      <button id="btn-config" class="btn-icon shadow-sm" title="Configurações">⚙️</button>
+      <button id="btn-logout" class="btn-icon shadow-sm" title="Sair">🚪 Sair</button>
+    </div>
+
+    <header>
+      <div style="display: flex; justify-content: center; align-items: center; gap: 0.75rem;">
+        <div class="logo-box" style="margin: 0;">💰</div>
+        <h1>Financeiro</h1>
+      </div>
+      <p id="user-email-display" style="margin-top: 0.5rem;"></p>
+    </header>
+
+    <div class="filter-bar shadow-sm">
+      <div class="filter-group">
+        <select id="filter-month">
+          <option value="0">Janeiro</option>
+          <option value="1">Fevereiro</option>
+          <option value="2">Março</option>
+          <option value="3">Abril</option>
+          <option value="4">Maio</option>
+          <option value="5">Junho</option>
+          <option value="6">Julho</option>
+          <option value="7">Agosto</option>
+          <option value="8">Setembro</option>
+          <option value="9">Outubro</option>
+          <option value="10">Novembro</option>
+          <option value="11">Dezembro</option>
+          <option value="all">Ano Inteiro</option>
+        </select>
+        <select id="filter-year">
+          <!-- JS -->
+        </select>
+      </div>
+      <div class="view-toggle">
+        <button id="btn-list-view" class="btn-toggle active" title="Lista">📝</button>
+        <button id="btn-calendar-view" class="btn-toggle" title="Calendário">📅</button>
+      </div>
+    </div>
+
+    <div class="summary-container">
+      <div class="summary-card income">
+        <span>Recebidos</span>
+        <strong id="total-income">R$ 0,00</strong>
+      </div>
+      <div class="summary-card expense">
+        <span>Gastos</span>
+        <strong id="total-expense">R$ 0,00</strong>
+      </div>
+      <div class="summary-card balance">
+        <span>Saldo</span>
+        <strong id="total-balance">R$ 0,00</strong>
+      </div>
+    </div>
+
+    <nav class="nav-tabs">
+      <div class="nav-tab active" data-target="view-expenses">Gastos</div>
+      <div class="nav-tab" data-target="view-incomes">Recebimentos</div>
+      <div class="nav-tab" data-target="view-statement">Extrato</div>
+    </nav>
+
+    <!-- View Gastos -->
+    <section id="view-expenses" class="tab-content">
+      <button id="btn-new-expense" class="btn-wide bg-primary shadow-sm" style="margin-bottom: 1.5rem;">+ Novo Gasto</button>
+      <div id="expenses-list" class="data-list">
+        <!-- JS -->
+      </div>
+      <div id="expenses-calendar" class="calendar-container hidden">
+        <!-- JS -->
+      </div>
+    </section>
+
+    <!-- View Recebimentos -->
+    <section id="view-incomes" class="tab-content hidden">
+      <button id="btn-new-income" class="btn-wide bg-primary shadow-sm" style="margin-bottom: 1.5rem;">+ Novo Recebimento</button>
+      <div id="incomes-list" class="data-list">
+        <!-- JS -->
+      </div>
+      <div id="incomes-calendar" class="calendar-container hidden">
+        <!-- JS -->
+      </div>
+    </section>
+
+    <!-- View Extrato -->
+    <section id="view-statement" class="tab-content hidden">
+      <div class="config-section">
+        <h3>Filtros do Extrato</h3>
+        <div class="filter-grid">
+          <div class="form-group">
+            <label>Tipo de Pagamento</label>
+            <select id="statement-type">
+              <option value="all">Todos</option>
+              <!-- JS -->
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Data Inicial</label>
+            <input type="date" id="statement-start-date">
+          </div>
+          <div class="form-group">
+            <label>Data Final</label>
+            <input type="date" id="statement-end-date">
+          </div>
+        </div>
+        <button id="btn-filter-statement" class="btn-wide bg-primary" style="margin-top: 1rem;">Filtrar</button>
+      </div>
+
+      <div class="summary-container" style="margin-top: 1rem;">
+        <div class="summary-card expense">
+          <span>Total no Período</span>
+          <strong id="statement-total">R$ 0,00</strong>
+        </div>
+      </div>
+
+      <div id="statement-list" class="data-list">
+        <!-- JS -->
+      </div>
+    </section>
+
+    <!-- View Configuração -->
+    <section id="view-config" class="tab-content hidden">
+      <h2>Configurações</h2>
+      
+      <!-- Seção Bancos -->
+      <div class="config-section">
+        <h3>Bancos</h3>
+        <form id="form-add-bank" class="inline-form">
+          <input type="text" id="bank-name" placeholder="Nome do Banco" required>
+          <button type="submit" class="btn-small bg-primary">Adicionar</button>
+        </form>
+        <div id="banks-list" class="tag-list">
+          <!-- JS -->
+        </div>
+      </div>
+
+      <!-- Seção Tipos de Pagamento -->
+      <div class="config-section">
+        <h3>Tipos de Pagamento</h3>
+        <form id="form-add-payment-type" class="inline-form">
+          <input type="text" id="payment-type-name" placeholder="Ex: Cartão, Pix" required>
+          <button type="submit" class="btn-small bg-primary">Adicionar</button>
+        </form>
+        <div id="payment-types-list" class="tag-list">
+          <!-- JS -->
+        </div>
+      </div>
+
+      <!-- Seção Conta -->
+      <div class="config-section">
+        <h3>Minha Conta</h3>
+        <div class="account-actions">
+          <button id="btn-show-change-password" class="btn-wide shadow-sm">Alterar Senha</button>
+          
+          <div id="google-link-container" style="margin-top: 1rem;">
+             <p id="google-status">Verificando vínculo com Google...</p>
+             <div id="google-link-button"></div>
+          </div>
+        </div>
+      </div>
+
+      <button onclick="showView('view-expenses')" class="btn-wide" style="margin-top: 2rem;">Voltar</button>
+    </section>
+  </div>
+
+  <!-- Modal Alterar Senha -->
+  <div id="modal-password" class="modal-overlay hidden">
+    <div class="modal-card">
+      <span class="close-x" onclick="closeModal('modal-password')">✕</span>
+      <h2>Alterar Senha</h2>
+      <form id="form-change-password">
+        <div class="form-group">
+          <label>Senha Atual</label>
+          <input type="password" id="current-pwd" required>
+        </div>
+        <div class="form-group">
+          <label>Nova Senha</label>
+          <input type="password" id="new-pwd" required>
+        </div>
+        <button type="submit" class="btn-wide bg-primary">Atualizar Senha</button>
+      </form>
+    </div>
+  </div>
+
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+  <!-- Modal Gasto -->
+  <div id="modal-expense" class="modal-overlay hidden">
+    <div class="modal-card">
+      <span class="close-x" onclick="closeModal('modal-expense')">✕</span>
+      <h2>Cadastrar Gasto</h2>
+      <form id="form-expense">
+        <div class="form-group">
+          <label>Tipo de Gasto</label>
+          <select id="exp-category" required>
+            <option value="Compra" selected>Compra</option>
+            <option value="Empréstimo">Empréstimo</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Compra/Local</label>
+          <input type="text" id="exp-desc" required>
+        </div>
+        <div class="form-group">
+          <label>Mês de Pagamento</label>
+          <select id="exp-month" required>
+            <option value="Janeiro">Janeiro</option>
+            <option value="Fevereiro">Fevereiro</option>
+            <option value="Março">Março</option>
+            <option value="Abril">Abril</option>
+            <option value="Maio">Maio</option>
+            <option value="Junho">Junho</option>
+            <option value="Julho">Julho</option>
+            <option value="Agosto">Agosto</option>
+            <option value="Setembro">Setembro</option>
+            <option value="Outubro">Outubro</option>
+            <option value="Novembro">Novembro</option>
+            <option value="Dezembro">Dezembro</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Número de Parcelas</label>
+          <input type="number" id="exp-installments" value="1" min="1" required>
+        </div>
+        <div class="form-group">
+          <label>Data da Compra</label>
+          <input type="date" id="exp-date" required>
+        </div>
+        <div class="form-group">
+          <label>Valor da Parcela (R$)</label>
+          <input type="text" id="exp-amount" required placeholder="0,00">
+        </div>
+        <div class="form-group">
+          <label>Tipo de Pagamento</label>
+          <input type="text" id="exp-type" list="payment-types" required>
+          <datalist id="payment-types">
+            <option value="Cartão de Crédito">
+            <option value="Boleto">
+            <option value="Pix">
+            <option value="Dinheiro">
+          </datalist>
+        </div>
+        <button type="submit" class="btn-wide bg-primary">Salvar Gasto</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Recebimento -->
+  <div id="modal-income" class="modal-overlay hidden">
+    <div class="modal-card">
+      <span class="close-x" onclick="closeModal('modal-income')">✕</span>
+      <h2>Cadastrar Recebimento</h2>
+      <form id="form-income">
+        <div class="form-group">
+          <label>Tipo de Recebimento</label>
+          <select id="inc-category" required>
+            <option value="Recebimento" selected>Recebimento Comum</option>
+            <option value="Empréstimo">Entrada de Empréstimo</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Procedência</label>
+          <input type="text" id="inc-source" required>
+          <datalist id="open-loans">
+            <!-- Dinâmico JS -->
+          </datalist>
+          <input type="hidden" id="inc-expense-id">
+        </div>
+        <div class="form-group">
+          <label>Mês Recebido</label>
+          <select id="inc-month" required>
+            <option value="Janeiro">Janeiro</option>
+            <option value="Fevereiro">Fevereiro</option>
+            <option value="Março">Março</option>
+            <option value="Abril">Abril</option>
+            <option value="Maio">Maio</option>
+            <option value="Junho">Junho</option>
+            <option value="Julho">Julho</option>
+            <option value="Agosto">Agosto</option>
+            <option value="Setembro">Setembro</option>
+            <option value="Outubro">Outubro</option>
+            <option value="Novembro">Novembro</option>
+            <option value="Dezembro">Dezembro</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Data de Recebimento</label>
+          <input type="date" id="inc-date" required>
+        </div>
+        <div class="form-group">
+          <label>Valor (R$)</label>
+          <input type="text" id="inc-amount" required placeholder="0,00">
+        </div>
+        <div class="form-group">
+          <label>Banco Recebido</label>
+          <input type="text" id="inc-bank" list="banks" required>
+          <datalist id="banks">
+            <option value="Nubank">
+            <option value="Itaú">
+            <option value="Bradesco">
+            <option value="Santander">
+            <option value="Inter">
+          </datalist>
+        </div>
+        <button type="submit" class="btn-wide bg-primary">Salvar Recebimento</button>
+      </form>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

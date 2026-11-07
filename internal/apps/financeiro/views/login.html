@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Financeiro Nobre - Login</title>
+  <link rel="stylesheet" href="/agenda/style.css">
+  <link rel="stylesheet" href="style.css">
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+  <div id="auth-container" class="auth-container">
+    <div id="login-card" class="modal-card">
+      <div class="logo-box">💰</div>
+      <h2>Financeiro</h2>
+      <p style="text-align: center; color: hsl(var(--muted-foreground)); margin-bottom: 1.5rem;">Controle seus gastos e ganhos</p>
+      <form id="login-form">
+        <div class="form-group">
+          <label for="login-email">E-mail</label>
+          <input type="email" id="login-email" required placeholder="seu@email.com">
+        </div>
+        <div class="form-group">
+          <label for="login-password">Senha</label>
+          <input type="password" id="login-password" required placeholder="••••••••">
+        </div>
+        <p id="login-error" class="error-msg hidden">Credenciais inválidas.</p>
+        <button type="submit" class="btn-wide bg-primary shadow-sm">Entrar</button>
+
+        <div style="margin: 1rem 0; display: flex; align-items: center; gap: 0.5rem; color: hsl(var(--muted-foreground)); font-size: 0.75rem;">
+          <hr style="flex: 1; border: 0; border-top: 1px solid hsl(var(--border));">
+          OU
+          <hr style="flex: 1; border: 0; border-top: 1px solid hsl(var(--border));">
+        </div>
+
+        <div id="google-login-btn" style="display: flex; justify-content: center;"></div>
+        
+        <p style="margin-top: 1rem; text-align: center; font-size: 0.875rem;">
+          Para cadastrar sua empresa, acesse a página inicial e utilize o login do Google.
+        </p>
+      </form>
+
+      <form id="register-form" class="hidden">
+        <!-- O cadastro é realizado apenas pela página inicial via Google -->
+      </form>
+
+      <p style="margin-top: 1.5rem; text-align: center; font-size: 0.875rem;">
+        <a href="/" style="color: hsl(var(--muted-foreground)); text-decoration: none;">← Voltar ao Início</a>
+      </p>
+    </div>
+  </div>
+
+  <script src="login.js"></script>
+</body>
+</html>

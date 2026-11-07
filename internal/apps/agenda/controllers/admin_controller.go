@@ -21,6 +21,30 @@ func HandleAdminUsers(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(users)
 }
 
+func HandleUpdateUserAccess(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Email         string `json:"email"`
+		HasAgenda     bool   `json:"has_agenda"`
+		HasFinanceiro bool   `json:"has_financeiro"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if err := common_models.GORM.Model(&common_models.User{}).Where("email = ?", req.Email).
+		Updates(map[string]any{
+			"has_agenda":     req.HasAgenda,
+			"has_financeiro": req.HasFinanceiro,
+		}).Error; err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
 func HandleGetPayments(w http.ResponseWriter, r *http.Request) {
 	var payments []common_models.UserPayment
 	if err := common_models.GORM.Preload("User").Order("due_date DESC").Find(&payments).Error; err != nil {

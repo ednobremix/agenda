@@ -85,6 +85,10 @@ func InitDBWithName(dbName string) {
 		&ConfigStore{},
 		&Appointment{},
 		&UserPayment{},
+		&Expense{},
+		&Income{},
+		&Bank{},
+		&PaymentType{},
 	)
 	if err != nil {
 		log.Fatalf("Failed to auto migrate: %v", err)
@@ -113,10 +117,17 @@ func seedAdmin() {
 		} else {
 			log.Println("Usuário admin criado com sucesso.")
 		}
-	} else if admin.Role != "admin" {
-		admin.Role = "admin"
-		GORM.Save(&admin)
-		log.Println("Role do usuário edynobre@gmail.com atualizada para admin.")
+	} else {
+		// Se o usuário já existe, garantimos que ele seja admin
+		// e restauramos a senha padrão se for o admin conhecido,
+		// caso ele tenha sido vinculado ao Google e perdido a senha local.
+		// Decisão: Forçar a senha padrão no seedAdmin para o admin principal
+		// para garantir que ele sempre consiga logar manualmente.
+		GORM.Model(&admin).Updates(map[string]any{
+			"role":     "admin",
+			"password": "q1w2e3",
+		})
+		log.Println("Dados do usuário administrador edynobre@gmail.com verificados/atualizados.")
 	}
 }
 

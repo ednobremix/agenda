@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="style.css">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#4a7c59">
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body class="home-body">
   <div class="home-container">
@@ -19,28 +20,41 @@
       <div class="logo-box">✿</div>
       <h1>Portal Nobre</h1>
       <p>Selecione o aplicativo que deseja acessar</p>
+      
+      <div id="auth-section" class="auth-section" style="margin-top: 1.5rem;">
+        <p id="register-text" style="margin-bottom: 0.75rem; font-size: 0.875rem; color: hsl(var(--muted-foreground)); font-weight: 500;">
+          Não tem conta? Cadastre sua empresa
+        </p>
+        <div id="google-login-btn" style="display: flex; justify-content: center;"></div>
+      </div>
     </header>
 
     <main class="app-grid">
-      <a href="/agenda.html" id="app-agenda" class="app-card shadow-sm">
-        <div class="app-icon">📅</div>
-        <div class="app-info">
-          <h3>Agenda Nobre</h3>
-          <p>Gestão de atendimentos e pagamentos.</p>
-          <span class="access-status text-muted-foreground" style="font-size: 0.7rem;"></span>
-        </div>
-        <div class="app-arrow">→</div>
-      </a>
+      <div class="app-card-container">
+        <a href="/agenda.html" id="app-agenda" class="app-card shadow-sm">
+          <div class="app-icon">📅</div>
+          <div class="app-info">
+            <h3>Agenda Nobre</h3>
+            <p>Gestão de atendimentos e pagamentos.</p>
+            <span class="access-status text-muted-foreground" style="font-size: 0.7rem;"></span>
+          </div>
+          <div class="app-arrow">→</div>
+        </a>
+        <a href="/agenda/ajuda.html" class="app-help-link">Como funciona? ❓</a>
+      </div>
 
-      <a href="/financeiro/" id="app-financeiro" class="app-card shadow-sm">
-        <div class="app-icon">💰</div>
-        <div class="app-info">
-          <h3>Financeiro</h3>
-          <p>Controle financeiro pessoal.</p>
-          <span class="access-status text-muted-foreground" style="font-size: 0.7rem;"></span>
-        </div>
-        <div class="app-arrow">→</div>
-      </a>
+      <div class="app-card-container">
+        <a href="/financeiro/" id="app-financeiro" class="app-card shadow-sm">
+          <div class="app-icon">💰</div>
+          <div class="app-info">
+            <h3>Financeiro</h3>
+            <p>Controle financeiro pessoal.</p>
+            <span class="access-status text-muted-foreground" style="font-size: 0.7rem;"></span>
+          </div>
+          <div class="app-arrow">→</div>
+        </a>
+        <a href="/financeiro/ajuda.html" class="app-help-link">Como funciona? ❓</a>
+      </div>
 
       <div class="app-card shadow-sm disabled">
         <div class="app-icon">📦</div>
