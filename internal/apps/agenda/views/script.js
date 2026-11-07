@@ -377,7 +377,7 @@
     if (elements.btnAdmin) {
       elements.btnAdmin.classList.add('hidden');
     }
-    showAuth();
+    window.location.reload(); // Recarrega para voltar à tela de login limpa
   }
 
   async function loadConfig() {

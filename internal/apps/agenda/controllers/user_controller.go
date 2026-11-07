@@ -3,21 +3,24 @@ package controllers
 import (
 	"encoding/base64"
 	"encoding/json"
-	"massage-scheduler/models"
-	"massage-scheduler/utils"
+	"errors"
+	"massage-scheduler/internal/common/models"
+	"massage-scheduler/internal/common/utils"
 	"net/http"
 	"strings"
+
+	"gorm.io/gorm"
 )
 
 func HandleRegister(w http.ResponseWriter, r *http.Request) {
-	var u models.User
+	var u common_models.User
 	if err := json.NewDecoder(r.Body).Decode(&u); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	u.Role = "user"
-	if err := models.GORM.Create(&u).Error; err != nil {
+	if err := common_models.GORM.Create(&u).Error; err != nil {
 		if strings.Contains(err.Error(), "UNIQUE constraint failed") || strings.Contains(err.Error(), "duplicate key") {
 			http.Error(w, "E-mail ou Usuário já cadastrado", http.StatusConflict)
 			return
@@ -27,7 +30,7 @@ func HandleRegister(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Enviar notificação para o admin
-	go utils.SendAdminNotification(u)
+	go common_utils.SendAdminNotification(u)
 
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(u)
@@ -43,8 +46,8 @@ func HandleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var u models.User
-	err := models.GORM.Where("email = ? AND password = ?", credentials.Email, credentials.Password).First(&u).Error
+	var u common_models.User
+	err := common_models.GORM.Where("email = ? AND password = ?", credentials.Email, credentials.Password).First(&u).Error
 	if err != nil {
 		http.Error(w, "Credenciais inválidas", http.StatusUnauthorized)
 		return
@@ -90,19 +93,19 @@ func HandleGoogleAuth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var u models.User
-	err = models.GORM.Where("google_id = ?", claims.Sub).First(&u).Error
+	var u common_models.User
+	err = common_models.GORM.Where("google_id = ?", claims.Sub).First(&u).Error
 
-	if err != nil {
+	if errors.Is(err, gorm.ErrRecordNotFound) {
 		// Se não achar por GoogleID, tenta por e-mail
-		err = models.GORM.Where("email = ?", claims.Email).First(&u).Error
+		err = common_models.GORM.Where("email = ?", claims.Email).First(&u).Error
 		if err == nil {
 			// Vincula o GoogleID se a conta existir mas não estiver vinculada
 			u.GoogleID = claims.Sub
-			models.GORM.Save(&u)
+			common_models.GORM.Save(&u)
 		} else {
 			// Cria novo usuário
-			u = models.User{
+			u = common_models.User{
 				Name:             claims.Name,
 				Business:         "Google User",
 				Email:            claims.Email,
@@ -112,12 +115,12 @@ func HandleGoogleAuth(w http.ResponseWriter, r *http.Request) {
 				MaxProfessionals: 1,
 				GoogleID:         claims.Sub,
 			}
-			if err := models.GORM.Create(&u).Error; err != nil {
+			if err := common_models.GORM.Create(&u).Error; err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
 			// Enviar notificação para o admin
-			go utils.SendAdminNotification(u)
+			go common_utils.SendAdminNotification(u)
 		}
 	}
 
@@ -131,8 +134,8 @@ func HandleMe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var user models.User
-	err := models.GORM.Where("email = ?", email).First(&user).Error
+	var user common_models.User
+	err := common_models.GORM.Where("email = ?", email).First(&user).Error
 
 	if err != nil {
 		http.Error(w, "User not found", http.StatusNotFound)
@@ -154,15 +157,15 @@ func HandleUpdatePassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var u models.User
-	err := models.GORM.Where("email = ? AND password = ?", email, data.CurrentPassword).First(&u).Error
+	var u common_models.User
+	err := common_models.GORM.Where("email = ? AND password = ?", email, data.CurrentPassword).First(&u).Error
 	if err != nil {
 		http.Error(w, "Senha atual incorreta", http.StatusUnauthorized)
 		return
 	}
 
 	u.Password = data.NewPassword
-	if err := models.GORM.Save(&u).Error; err != nil {
+	if err := common_models.GORM.Save(&u).Error; err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -201,8 +204,8 @@ func HandleLinkGoogle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var u models.User
-	if err := models.GORM.Where("email = ?", email).First(&u).Error; err != nil {
+	var u common_models.User
+	if err := common_models.GORM.Where("email = ?", email).First(&u).Error; err != nil {
 		http.Error(w, "Usuário não encontrado", http.StatusNotFound)
 		return
 	}
@@ -213,7 +216,7 @@ func HandleLinkGoogle(w http.ResponseWriter, r *http.Request) {
 		u.Username = claims.Email
 	}
 
-	if err := models.GORM.Save(&u).Error; err != nil {
+	if err := common_models.GORM.Save(&u).Error; err != nil {
 		if strings.Contains(err.Error(), "UNIQUE constraint failed") || strings.Contains(err.Error(), "duplicate key") {
 			http.Error(w, "Esta conta Google já está vinculada a outro usuário", http.StatusConflict)
 			return

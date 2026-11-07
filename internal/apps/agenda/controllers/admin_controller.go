@@ -2,7 +2,7 @@ package controllers
 
 import (
 	"encoding/json"
-	"massage-scheduler/models"
+	"massage-scheduler/internal/common/models"
 	"net/http"
 	"time"
 
@@ -11,8 +11,8 @@ import (
 )
 
 func HandleAdminUsers(w http.ResponseWriter, r *http.Request) {
-	var users []models.User
-	if err := models.GORM.Order("created_at DESC").Find(&users).Error; err != nil {
+	var users []common_models.User
+	if err := common_models.GORM.Order("created_at DESC").Find(&users).Error; err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -22,8 +22,8 @@ func HandleAdminUsers(w http.ResponseWriter, r *http.Request) {
 }
 
 func HandleGetPayments(w http.ResponseWriter, r *http.Request) {
-	var payments []models.UserPayment
-	if err := models.GORM.Preload("User").Order("due_date DESC").Find(&payments).Error; err != nil {
+	var payments []common_models.UserPayment
+	if err := common_models.GORM.Preload("User").Order("due_date DESC").Find(&payments).Error; err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -33,7 +33,7 @@ func HandleGetPayments(w http.ResponseWriter, r *http.Request) {
 }
 
 func HandleCreatePayment(w http.ResponseWriter, r *http.Request) {
-	var payment models.UserPayment
+	var payment common_models.UserPayment
 	if err := json.NewDecoder(r.Body).Decode(&payment); err != nil {
 		http.Error(w, "Erro ao decodificar JSON: "+err.Error(), http.StatusBadRequest)
 		return
@@ -44,7 +44,7 @@ func HandleCreatePayment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := models.GORM.Create(&payment).Error; err != nil {
+	if err := common_models.GORM.Create(&payment).Error; err != nil {
 		http.Error(w, "Erro ao salvar no banco: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -63,13 +63,12 @@ func HandleUpdatePayment(w http.ResponseWriter, r *http.Request) {
 
 	updates := map[string]any{"status": req.Status}
 	if req.Status == "paid" {
-		updates["paid_at"] = new(time.Time)
-		*updates["paid_at"].(*time.Time) = time.Now()
+		updates["paid_at"] = new(time.Now())
 	} else {
 		updates["paid_at"] = nil
 	}
 
-	if err := models.GORM.Model(&models.UserPayment{}).Where("id = ?", req.ID).Updates(updates).Error; err != nil {
+	if err := common_models.GORM.Model(&common_models.UserPayment{}).Where("id = ?", req.ID).Updates(updates).Error; err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -95,7 +94,7 @@ func HandleUpdateUserPermission(w http.ResponseWriter, r *http.Request) {
 		updates["free_scheduling"] = *req.FreeScheduling
 	}
 
-	if err := models.GORM.Model(&models.User{}).Where("email = ?", req.Email).Updates(updates).Error; err != nil {
+	if err := common_models.GORM.Model(&common_models.User{}).Where("email = ?", req.Email).Updates(updates).Error; err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -122,9 +121,9 @@ func HandleDeleteUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Iniciamos uma transação para garantir a integridade da exclusão de todos os dados
-	err := models.GORM.Transaction(func(tx *gorm.DB) error {
+	err := common_models.GORM.Transaction(func(tx *gorm.DB) error {
 		// 1. Encontrar o usuário para obter o ID
-		var user models.User
+		var user common_models.User
 		if err := tx.Where("email = ?", email).First(&user).Error; err != nil {
 			return err
 		}
@@ -132,10 +131,10 @@ func HandleDeleteUser(w http.ResponseWriter, r *http.Request) {
 		// 2. Excluir dados vinculados pelo E-mail (ConfigStore e Appointment)
 		// Usamos Unscoped() para exclusão física completa se desejado, ou mantemos soft delete.
 		// O requisito diz "excluir todos os dados", então usaremos exclusão física para garantir.
-		if err := tx.Unscoped().Where("user_email = ?", email).Delete(&models.ConfigStore{}).Error; err != nil {
+		if err := tx.Unscoped().Where("user_email = ?", email).Delete(&common_models.ConfigStore{}).Error; err != nil {
 			return err
 		}
-		if err := tx.Unscoped().Where("user_email = ?", email).Delete(&models.Appointment{}).Error; err != nil {
+		if err := tx.Unscoped().Where("user_email = ?", email).Delete(&common_models.Appointment{}).Error; err != nil {
 			return err
 		}
 

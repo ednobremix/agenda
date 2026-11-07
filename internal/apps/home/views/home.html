@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Portal Nobre</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#4a7c59">
+</head>
+<body class="home-body">
+  <div class="home-container">
+    <div id="user-bar" class="top-actions hidden">
+      <span id="user-name" style="font-size: 0.875rem; font-weight: 500;"></span>
+      <button onclick="handleHomeLogout()" class="btn-icon" title="Sair">🚪 Sair</button>
+    </div>
+
+    <header>
+      <div class="logo-box">✿</div>
+      <h1>Portal Nobre</h1>
+      <p>Selecione o aplicativo que deseja acessar</p>
+    </header>
+
+    <main class="app-grid">
+      <a href="/agenda.html" id="app-agenda" class="app-card shadow-sm">
+        <div class="app-icon">📅</div>
+        <div class="app-info">
+          <h3>Agenda Nobre</h3>
+          <p>Gestão de atendimentos e pagamentos.</p>
+          <span class="access-status text-muted-foreground" style="font-size: 0.7rem;"></span>
+        </div>
+        <div class="app-arrow">→</div>
+      </a>
+
+      <a href="/financeiro/" id="app-financeiro" class="app-card shadow-sm">
+        <div class="app-icon">💰</div>
+        <div class="app-info">
+          <h3>Financeiro</h3>
+          <p>Controle financeiro pessoal.</p>
+          <span class="access-status text-muted-foreground" style="font-size: 0.7rem;"></span>
+        </div>
+        <div class="app-arrow">→</div>
+      </a>
+
+      <div class="app-card shadow-sm disabled">
+        <div class="app-icon">📦</div>
+        <div class="app-info">
+          <h3>Estoque</h3>
+          <p>Gestão de produtos e insumos (Em breve).</p>
+        </div>
+      </div>
+    </main>
+
+    <footer style="text-align: center; margin-top: 3rem; font-size: 0.75rem; color: hsl(var(--muted-foreground));">
+      &copy; 2026 Portal Nobre. Todos os direitos reservados.
+    </footer>
+  </div>
+  <script src="home.js"></script>
+</body>
+</html>

@@ -713,3 +713,83 @@ header p {
 #debug-user-list li:hover {
   filter: brightness(0.8);
 }
+
+/* Home Page Styles */
+.home-body {
+  background-color: hsl(var(--background));
+}
+
+.home-container {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.app-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.app-card {
+  display: flex;
+  align-items: center;
+  padding: 1.5rem;
+  background-color: white;
+  border: 1px solid hsl(var(--border));
+  border-radius: 1.25rem;
+  text-decoration: none;
+  color: inherit;
+  transition: all 0.2s ease;
+  gap: 1.25rem;
+}
+
+.app-card:not(.disabled):hover {
+  transform: translateY(-2px);
+  border-color: hsl(var(--primary));
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.app-card.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background-color: hsl(var(--muted) / 0.5);
+}
+
+.app-icon {
+  font-size: 2.5rem;
+  width: 64px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: hsl(var(--accent));
+  border-radius: 1rem;
+}
+
+.app-info {
+  flex: 1;
+}
+
+.app-info h3 {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #2d4a36;
+  margin-bottom: 0.25rem;
+}
+
+.app-info p {
+  font-size: 0.875rem;
+  color: hsl(var(--muted-foreground));
+}
+
+.app-arrow {
+  font-size: 1.25rem;
+  color: hsl(var(--primary));
+  font-weight: bold;
+}

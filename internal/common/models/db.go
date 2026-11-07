@@ -1,8 +1,9 @@
-package models
+package common_models
 
 import (
 	"bufio"
 	"database/sql"
+	"errors"
 	"log"
 	"os"
 	"strings"
@@ -41,6 +42,10 @@ func loadEnv() {
 }
 
 func InitDB() {
+	InitDBWithName("")
+}
+
+func InitDBWithName(dbName string) {
 	loadEnv()
 	dsn := os.Getenv("DATABASE_URL")
 	var err error
@@ -48,11 +53,14 @@ func InitDB() {
 		log.Println("Conectando ao PostgreSQL via DATABASE_URL...")
 		GORM, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	} else {
-		sqliteFile := os.Getenv("SQLITE_DB")
+		sqliteFile := dbName
+		if sqliteFile == "" {
+			sqliteFile = os.Getenv("SQLITE_DB")
+		}
 		if sqliteFile == "" {
 			sqliteFile = "sqlite.db"
 		}
-		log.Printf("DATABASE_URL não definida. Usando SQLite local (%s) como fallback...\n", sqliteFile)
+		log.Printf("DATABASE_URL não definida. Usando SQLite local (%s)...\n", sqliteFile)
 		GORM, err = gorm.Open(sqlite.Open(sqliteFile), &gorm.Config{})
 	}
 
@@ -90,8 +98,9 @@ func InitDB() {
 
 func seedAdmin() {
 	var admin User
+	// Garantir que edynobre@gmail.com tenha sempre a role admin
 	result := GORM.Where("email = ?", "edynobre@gmail.com").First(&admin)
-	if result.Error != nil && result.Error == gorm.ErrRecordNotFound {
+	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		admin = User{
 			Name:     "Administrador",
 			Business: "Sistema",
@@ -104,6 +113,10 @@ func seedAdmin() {
 		} else {
 			log.Println("Usuário admin criado com sucesso.")
 		}
+	} else if admin.Role != "admin" {
+		admin.Role = "admin"
+		GORM.Save(&admin)
+		log.Println("Role do usuário edynobre@gmail.com atualizada para admin.")
 	}
 }
 

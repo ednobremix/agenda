@@ -3,7 +3,7 @@ package controllers
 import (
 	"encoding/json"
 	"errors"
-	"massage-scheduler/models"
+	"massage-scheduler/internal/common/models"
 	"net/http"
 	"time"
 
@@ -12,8 +12,8 @@ import (
 
 func HandleGetAppointments(w http.ResponseWriter, r *http.Request) {
 	email := r.URL.Query().Get("email")
-	var apps []models.Appointment
-	if err := models.GORM.Where("user_email = ?", email).Find(&apps).Error; err != nil {
+	var apps []common_models.Appointment
+	if err := common_models.GORM.Where("user_email = ?", email).Find(&apps).Error; err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -24,15 +24,15 @@ func HandleGetAppointments(w http.ResponseWriter, r *http.Request) {
 
 func HandleSaveAppointments(w http.ResponseWriter, r *http.Request) {
 	email := r.URL.Query().Get("email")
-	var apps []models.Appointment
+	var apps []common_models.Appointment
 	if err := json.NewDecoder(r.Body).Decode(&apps); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	err := models.GORM.Transaction(func(tx *gorm.DB) error {
+	err := common_models.GORM.Transaction(func(tx *gorm.DB) error {
 		// Verificar se o usuário tem agendamento livre ou restrição de 1 por dia
-		var user models.User
+		var user common_models.User
 		if err := tx.Where("email = ?", email).First(&user).Error; err != nil {
 			return err
 		}
@@ -57,7 +57,7 @@ func HandleSaveAppointments(w http.ResponseWriter, r *http.Request) {
 		// No entanto, não permitimos o cancelamento de sessões que já passaram e foram pagas.
 		// Precisamos garantir que elas permaneçam se existirem.
 
-		var existingApps []models.Appointment
+		var existingApps []common_models.Appointment
 		if err := tx.Where("user_email = ?", email).Find(&existingApps).Error; err != nil {
 			return err
 		}
@@ -90,7 +90,7 @@ func HandleSaveAppointments(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		if err := tx.Unscoped().Where("user_email = ?", email).Delete(&models.Appointment{}).Error; err != nil {
+		if err := tx.Unscoped().Where("user_email = ?", email).Delete(&common_models.Appointment{}).Error; err != nil {
 			return err
 		}
 

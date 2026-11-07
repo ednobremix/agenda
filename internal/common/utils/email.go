@@ -1,14 +1,14 @@
-package utils
+package common_utils
 
 import (
 	"fmt"
 	"log"
-	"massage-scheduler/models"
+	"massage-scheduler/internal/common/models"
 	"net/smtp"
 	"os"
 )
 
-func SendAdminNotification(newUser models.User) {
+func SendAdminNotification(newUser common_models.User) {
 	adminEmail := os.Getenv("ADMIN_EMAIL")
 	if adminEmail == "" {
 		adminEmail = "edynobre@gmail.com" // Fallback baseado no seedAdmin

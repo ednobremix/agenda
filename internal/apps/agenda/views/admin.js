@@ -61,7 +61,7 @@
 
   function handleLogout() {
     localStorage.removeItem(SESSION_KEY);
-    window.location.href = '/';
+    window.location.href = '/agenda.html';
   }
 
   function switchAdminTab(tab) {
