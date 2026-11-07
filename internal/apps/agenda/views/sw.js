@@ -1,10 +1,21 @@
-const CACHE_NAME = 'agenda-nobre-v1';
+const CACHE_NAME = 'portalnobre-nobre-v5';
 const ASSETS = [
   '/',
-  '/index.html',
+  '/home.js',
   '/style.css',
-  '/script.js',
-  '/manifest.json'
+  '/manifest.json',
+  '/sw.js',
+  '/assets/logo.png',
+  '/agenda/index.html',
+  '/agenda/style.css',
+  '/agenda/script.js',
+  '/agenda/assets/logo.png',
+  '/financeiro/index.html',
+  '/financeiro/style.css',
+  '/financeiro/app.js',
+  '/financeiro/assets/logo.png',
+  '/estoque/index.html',
+  '/estoque/app.js'
 ];
 
 self.addEventListener('install', (event) => {
@@ -15,7 +26,30 @@ self.addEventListener('install', (event) => {
   );
 });
 
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames.map((cacheName) => {
+          if (cacheName !== CACHE_NAME) {
+            return caches.delete(cacheName);
+          }
+        })
+      );
+    })
+  );
+});
+
 self.addEventListener('fetch', (event) => {
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request).catch(() => {
+        return caches.match(event.request);
+      })
+    );
+    return;
+  }
+
   event.respondWith(
     caches.match(event.request).then((response) => {
       return response || fetch(event.request);
