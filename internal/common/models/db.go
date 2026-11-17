@@ -85,6 +85,13 @@ func InitDBWithName(dbName string) {
 		&ConfigStore{},
 		&Appointment{},
 		&UserPayment{},
+		&Expense{},
+		&Income{},
+		&Bank{},
+		&PaymentType{},
+		&Product{},
+		&ProductBatch{},
+		&StockMovement{},
 	)
 	if err != nil {
 		log.Fatalf("Failed to auto migrate: %v", err)
@@ -94,6 +101,37 @@ func InitDBWithName(dbName string) {
 
 	// Criar usuário admin se não existir (Exemplo de semente/seed)
 	seedAdmin()
+
+	// Garantir que todos os produtos tenham pelo menos um lote (para produtos legados)
+	FixLegacyProducts()
+}
+
+func FixLegacyProducts() {
+	var products []Product
+	if err := GORM.Find(&products).Error; err != nil {
+		log.Printf("Erro ao buscar produtos para correção de lotes: %v", err)
+		return
+	}
+
+	for _, p := range products {
+		if p.Quantity <= 0 {
+			continue
+		}
+		var count int64
+		GORM.Model(&ProductBatch{}).Where("product_id = ?", p.ID).Count(&count)
+		if count == 0 {
+			log.Printf("Corrigindo produto legado %s (ID %d): criando lote inicial...\n", p.Name, p.ID)
+			batch := ProductBatch{
+				ProductID:      p.ID,
+				Quantity:       p.Quantity,
+				Value:          p.Value,
+				ProductionCost: p.ProductionCost,
+			}
+			if err := GORM.Create(&batch).Error; err != nil {
+				log.Printf("Erro ao criar lote para produto %d: %v", p.ID, err)
+			}
+		}
+	}
 }
 
 func seedAdmin() {
@@ -113,10 +151,17 @@ func seedAdmin() {
 		} else {
 			log.Println("Usuário admin criado com sucesso.")
 		}
-	} else if admin.Role != "admin" {
-		admin.Role = "admin"
-		GORM.Save(&admin)
-		log.Println("Role do usuário edynobre@gmail.com atualizada para admin.")
+	} else {
+		// Se o usuário já existe, garantimos que ele seja admin
+		// e restauramos a senha padrão se for o admin conhecido,
+		// caso ele tenha sido vinculado ao Google e perdido a senha local.
+		// Decisão: Forçar a senha padrão no seedAdmin para o admin principal
+		// para garantir que ele sempre consiga logar manualmente.
+		GORM.Model(&admin).Updates(map[string]any{
+			"role":     "admin",
+			"password": "q1w2e3",
+		})
+		log.Println("Dados do usuário administrador edynobre@gmail.com verificados/atualizados.")
 	}
 }
 

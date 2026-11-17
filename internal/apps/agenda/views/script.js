@@ -36,6 +36,7 @@
 
   // Elementos DOM
   const elements = {
+    appContent: document.getElementById('app-content'),
     successBanner: document.getElementById('success-banner'),
     successMessage: document.getElementById('success-message'),
     totalReceived: document.getElementById('total-received'),
@@ -81,14 +82,9 @@
     inputDuration: document.getElementById('duration'),
     inputDateTime: document.getElementById('datetime'),
     btnSettings: document.getElementById('btn-settings'),
-    btnUpdatePassword: document.getElementById('btn-update-password'),
     btnHelp: document.getElementById('btn-help'),
-    configCurrentPassword: document.getElementById('config-current-password'),
-    configNewPassword: document.getElementById('config-new-password'),
-    configConfirmPassword: document.getElementById('config-confirm-password'),
     googleLinkStatus: document.getElementById('google-link-status'),
     googleLinkBtnContainer: document.getElementById('google-link-btn-container'),
-    passwordUpdateSection: document.getElementById('password-update-section'),
     googleLinkSection: document.getElementById('google-link-section'),
     googleLoggedMessage: document.getElementById('google-logged-message'),
     settingsOverlay: document.getElementById('settings-overlay'),
@@ -110,18 +106,6 @@
     therapistInput: document.getElementById('therapist'),
     typeLabel: document.querySelector('label[for="type"]'),
     
-    // Auth elements
-    authContainer: document.getElementById('auth-container'),
-    appContent: document.getElementById('app-content'),
-    loginForm: document.getElementById('login-form'),
-    registerForm: document.getElementById('register-form'),
-    loginCard: document.getElementById('login-card'),
-    registerCard: document.getElementById('register-card'),
-    goToRegister: document.getElementById('go-to-register'),
-    goToLogin: document.getElementById('go-to-login'),
-    loginError: document.getElementById('login-error'),
-    regError: document.getElementById('reg-error'),
-    btnLogout: document.getElementById('btn-logout'),
     userInfo: document.getElementById('user-info'),
     
     viewPaymentsBtn: document.getElementById('view-payments-btn'),
@@ -155,15 +139,13 @@
 
     gisInited = true;
 
-    google.accounts.id.renderButton(
-      document.getElementById("google-login-btn"),
-      { theme: "outline", size: "large", width: 300 }
-    );
-
-    google.accounts.id.renderButton(
-      document.getElementById("google-register-btn"),
-      { theme: "outline", size: "large", width: 300 }
-    );
+    const btn = document.getElementById("google-login-btn");
+    if (btn) {
+      google.accounts.id.renderButton(
+        btn,
+        { theme: "outline", size: "large", width: 300 }
+      );
+    }
   }
 
   async function handleCredentialResponse(response) {
@@ -190,6 +172,9 @@
         if (freshUserResp.ok) {
           currentUser = await freshUserResp.json();
           localStorage.setItem(SESSION_KEY, JSON.stringify(currentUser));
+          localStorage.setItem('role', currentUser.role); // Salva a role para a Home
+          localStorage.setItem('has_agenda', currentUser.has_agenda);
+          localStorage.setItem('has_financeiro', currentUser.has_financeiro);
           renderGoogleLinkButton();
           // Feedback visual imediato na seção de segurança
           if (elements.googleLinkStatus) {
@@ -203,6 +188,20 @@
         const user = await resp.json();
         currentUser = user;
         localStorage.setItem(SESSION_KEY, JSON.stringify(currentUser));
+        localStorage.setItem('financeiro_user', JSON.stringify(currentUser)); // Sincroniza com Financeiro
+        localStorage.setItem('role', currentUser.role); // Salva a role para a Home
+        localStorage.setItem('has_agenda', currentUser.has_agenda);
+        localStorage.setItem('has_financeiro', currentUser.has_financeiro);
+
+        const isAdmin = currentUser && currentUser.role === 'admin';
+        const hasAgenda = isAdmin || currentUser.has_agenda;
+        
+        if (!hasAgenda) {
+          alert("Acesso negado. Esta conta não possui permissão para o App Agenda de Serviços.");
+          location.href = '/agenda/login.html';
+          return;
+        }
+
         showApp();
       }
     } catch (err) {
@@ -222,26 +221,31 @@
           const freshUser = await resp.json();
           currentUser = freshUser;
           localStorage.setItem(SESSION_KEY, JSON.stringify(currentUser));
+          localStorage.setItem('role', currentUser.role); // Salva a role para a Home
+          localStorage.setItem('has_agenda', currentUser.has_agenda);
+          localStorage.setItem('has_financeiro', currentUser.has_financeiro);
         }
       } catch (err) {
         console.error("Erro ao revalidar sessão:", err);
       }
       await showApp();
     } else {
-      showAuth();
+      window.location.href = '/agenda/login.html';
     }
   }
 
-  function showAuth() {
-    elements.authContainer.classList.remove('hidden');
-    elements.appContent.classList.add('hidden');
-    showLogin();
-  }
-
-  async function showApp() {
-    elements.authContainer.classList.add('hidden');
+    async function showApp() {
     elements.appContent.classList.remove('hidden');
-    
+
+    const isAdmin = currentUser && currentUser.role === 'admin';
+    const hasAgenda = isAdmin || (currentUser && currentUser.has_agenda);
+
+    if (!hasAgenda) {
+      alert("Você não tem permissão para acessar o App Agenda. Entre em contato com o administrador.");
+      window.location.href = '/agenda/login.html';
+      return;
+    }
+
     // Reset state before loading new user data
     appointments = [];
     config = {
@@ -264,13 +268,12 @@
     
     if (elements.userInfo) {
       elements.userInfo.textContent = `Logado como: ${currentUser.name} (${currentUser.email})`;
-      if (currentUser.role === 'admin') {
+      if (isAdmin) {
           elements.userInfo.textContent += " (Administrador)";
       }
     }
 
     // Toggle Admin Buttons based on role
-    const isAdmin = currentUser && currentUser.role === 'admin';
     if (elements.btnAdmin) {
       elements.btnAdmin.classList.toggle('hidden', !isAdmin);
     }
@@ -281,104 +284,11 @@
         elements.viewPaymentsBtn.classList.toggle('hidden', !isAdmin);
     }
     
-    // Se for admin, o painel admin é a tela principal
-    // A menos que o parâmetro bypassAdmin=true esteja na URL
-    if (isAdmin) {
-      const urlParams = new URLSearchParams(window.location.search);
-      if (urlParams.get('bypassAdmin') !== 'true') {
-        window.location.href = '/admin.html';
-        return;
-      }
-    }
-    
     render();
   }
 
-  function showLogin() {
-    elements.loginCard.classList.remove('hidden');
-    elements.registerCard.classList.add('hidden');
-    elements.loginError.classList.add('hidden');
-  }
 
 
-  function showRegister() {
-    elements.loginCard.classList.add('hidden');
-    elements.registerCard.classList.remove('hidden');
-    elements.regError.classList.add('hidden');
-  }
-
-  async function handleLogin(e) {
-    e.preventDefault();
-    const email = document.getElementById('login-email').value;
-    const password = document.getElementById('login-password').value;
-
-    try {
-      const resp = await fetch('/api/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
-      });
-
-      if (resp.ok) {
-        const user = await resp.json();
-        currentUser = user;
-        localStorage.setItem(SESSION_KEY, JSON.stringify(user));
-        await showApp();
-        elements.loginForm.reset();
-      } else {
-        elements.loginError.classList.remove('hidden');
-      }
-    } catch (err) {
-      elements.loginError.textContent = "Erro de conexão.";
-      elements.loginError.classList.remove('hidden');
-    }
-  }
-
-  async function handleRegister(e) {
-    e.preventDefault();
-    const name = document.getElementById('reg-name').value;
-    const business = document.getElementById('reg-business').value;
-    const email = document.getElementById('reg-email').value;
-    const password = document.getElementById('reg-password').value;
-
-    try {
-      const resp = await fetch('/api/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, business, email, password })
-      });
-
-      if (resp.ok) {
-        const newUser = await resp.json();
-        // Auto login after register
-        currentUser = newUser;
-        localStorage.setItem(SESSION_KEY, JSON.stringify(newUser));
-        await showApp();
-        elements.registerForm.reset();
-      } else if (resp.status === 409) {
-        elements.regError.textContent = "E-mail já cadastrado.";
-        elements.regError.classList.remove('hidden');
-      } else {
-        elements.regError.textContent = "Erro ao cadastrar.";
-        elements.regError.classList.remove('hidden');
-      }
-    } catch (err) {
-      elements.regError.textContent = "Erro de conexão.";
-      elements.regError.classList.remove('hidden');
-    }
-  }
-
-  function handleLogout() {
-    localStorage.removeItem(SESSION_KEY);
-    currentUser = null;
-    if (typeof google !== 'undefined' && google.accounts.id) {
-      google.accounts.id.disableAutoSelect();
-    }
-    if (elements.btnAdmin) {
-      elements.btnAdmin.classList.add('hidden');
-    }
-    window.location.reload(); // Recarrega para voltar à tela de login limpa
-  }
 
   async function loadConfig() {
     try {
@@ -635,18 +545,11 @@
   // --- Handlers de Eventos ---
 
   function setupEventListeners() {
-    // Auth listeners
-    elements.goToRegister.onclick = (e) => { e.preventDefault(); showRegister(); };
-    elements.goToLogin.onclick = (e) => { e.preventDefault(); showLogin(); };
-    elements.loginForm.onsubmit = handleLogin;
-    elements.registerForm.onsubmit = handleRegister;
-    elements.btnLogout.onclick = handleLogout;
-
     elements.btnNewAppointment.onclick = () => openModal();
     if (elements.btnNewPaymentMain) {
       elements.btnNewPaymentMain.onclick = () => {
         if (currentUser && currentUser.role === 'admin') {
-          window.location.href = '/admin.html?action=new-payment';
+          window.location.href = '/agenda/admin.html?action=new-payment';
         } else {
           alert('Apenas administradores podem lançar pagamentos.');
         }
@@ -709,16 +612,12 @@
     }
 
     elements.settingsForm.onsubmit = handleSettingsSubmit;
-    if (elements.btnUpdatePassword) elements.btnUpdatePassword.onclick = handleUpdatePassword;
 
     // Admin
-    if (elements.btnAdmin) {
-      elements.btnAdmin.onclick = () => window.location.href = '/admin.html';
-    }
 
     // Ajuda
     if (elements.btnHelp) {
-      elements.btnHelp.onclick = () => window.location.href = '/ajuda.html';
+      elements.btnHelp.onclick = () => window.location.href = '/agenda/ajuda.html';
     }
 
     // Atualizar valor e duração ao trocar o tipo de serviço no agendamento
@@ -819,11 +718,6 @@
     config.services.forEach(s => addServiceRow(s.name, s.value, s.duration));
     if (config.services.length === 0) addServiceRow();
 
-    // Reset password fields
-    elements.configCurrentPassword.value = '';
-    elements.configNewPassword.value = '';
-    elements.configConfirmPassword.value = '';
-    
     // Reset security section to collapsed
     if (elements.securitySection) {
       elements.securitySection.classList.add('hidden');
@@ -832,11 +726,9 @@
 
     // Toggle sections based on Google login
     if (currentUser.google_id) {
-      if (elements.passwordUpdateSection) elements.passwordUpdateSection.classList.add('hidden');
       if (elements.googleLinkSection) elements.googleLinkSection.classList.add('hidden');
       if (elements.googleLoggedMessage) elements.googleLoggedMessage.classList.remove('hidden');
     } else {
-      if (elements.passwordUpdateSection) elements.passwordUpdateSection.classList.remove('hidden');
       if (elements.googleLinkSection) elements.googleLinkSection.classList.remove('hidden');
       if (elements.googleLoggedMessage) elements.googleLoggedMessage.classList.add('hidden');
     }
@@ -846,47 +738,6 @@
     elements.settingsOverlay.classList.remove('hidden');
   }
 
-  async function handleUpdatePassword() {
-    const current = elements.configCurrentPassword.value;
-    const newPass = elements.configNewPassword.value;
-    const confirm = elements.configConfirmPassword.value;
-
-    if (!current || !newPass || !confirm) {
-      alert("Por favor, preencha todos os campos de senha.");
-      return;
-    }
-
-    if (newPass.length < 6) {
-      alert("A nova senha deve ter pelo menos 6 caracteres.");
-      return;
-    }
-
-    if (newPass !== confirm) {
-      alert("A nova senha e a confirmação não coincidem.");
-      return;
-    }
-
-    try {
-      const resp = await fetch(`/api/user/update-password?email=${encodeURIComponent(currentUser.email)}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ current_password: current, new_password: newPass })
-      });
-
-      if (resp.ok) {
-        alert("Senha atualizada com sucesso!");
-        elements.configCurrentPassword.value = '';
-        elements.configNewPassword.value = '';
-        elements.configConfirmPassword.value = '';
-      } else {
-        const msg = await resp.text();
-        alert("Erro ao atualizar senha: " + msg);
-      }
-    } catch (err) {
-      console.error(err);
-      alert("Erro de conexão ao atualizar senha.");
-    }
-  }
 
   function renderGoogleLinkButton() {
     if (!gisInited) {
@@ -947,7 +798,7 @@
       return;
     }
     
-    window.location.href = '/admin.html';
+    window.location.href = '/agenda/admin.html';
   }
 
   function switchAdminTab(tab) {
@@ -1048,7 +899,7 @@
           <td>${createdAt.toLocaleDateString('pt-BR')} ${createdAt.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'})}</td>
           <td>${timeText}</td>
           <td>
-            <button class="bg-primary" style="border: none; padding: 4px 8px; border-radius: 4px; color: white; cursor: pointer; font-size: 0.75rem; margin-right: 4px;" onclick="window.location.href='/admin.html?action=new-payment&userId=${u.ID}'">Agendar Pagto</button>
+            <button class="bg-primary" style="border: none; padding: 4px 8px; border-radius: 4px; color: white; cursor: pointer; font-size: 0.75rem; margin-right: 4px;" onclick="window.location.href='/agenda/admin.html?action=new-payment&userId=${u.ID}'">Agendar Pagto</button>
             ${u.email !== currentUser.email && u.email !== 'edynobre@gmail.com' ? `
               <button class="bg-destructive" style="border: none; padding: 4px 8px; border-radius: 4px; color: white; cursor: pointer; font-size: 0.75rem;" onclick="window.app.deleteUser('${u.email}')">Excluir</button>
             ` : ''}

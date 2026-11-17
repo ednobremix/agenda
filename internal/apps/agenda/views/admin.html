@@ -3,8 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin - Agenda Nobre</title>
+  <title>Admin - Agenda de Serviços</title>
   <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#4a7c59">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="agenda">
+  <link rel="apple-touch-icon" href="assets/logo.png">
   <style>
     .admin-container {
       max-width: 1200px;
@@ -37,9 +44,8 @@
 <body>
   <div class="admin-container">
     <div class="admin-header">
-      <a href="/agenda.html?bypassAdmin=true" class="back-link">← Voltar para Agenda</a>
+      <a href="/" class="back-link">← Voltar ao Portal</a>
       <h1>Painel Administrativo</h1>
-      <button id="btn-logout-admin" class="btn-icon">🚪 Sair</button>
     </div>
 
     <div class="admin-card">
@@ -49,12 +55,28 @@
       </div>
 
       <div id="admin-view-users">
+        <div style="margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+          <div style="display: flex; gap: 0.5rem; align-items: center;">
+            <label for="filter-app" style="font-weight: 600;">Filtrar por App:</label>
+            <select id="filter-app" style="padding: 0.5rem; border-radius: 0.5rem; border: 1px solid #ddd;">
+              <option value="all">Todos</option>
+              <option value="agenda">Agenda de Serviços</option>
+              <option value="financeiro">Financeiro Nobre</option>
+              <option value="estoque">Estoque Nobre</option>
+              <option value="all_apps">Todos os Apps</option>
+            </select>
+          </div>
+          <div style="background: hsl(var(--primary)); color: white; padding: 0.5rem 1rem; border-radius: 2rem; font-weight: 600; font-size: 0.875rem;">
+            Total: <span id="user-count">0</span> usuários
+          </div>
+        </div>
         <div class="admin-table-container">
           <table class="admin-table">
             <thead>
               <tr>
                 <th>Nome</th>
                 <th>E-mail</th>
+                <th>Acessos</th>
                 <th>Empresa/Ramo</th>
                 <th>Qtd. Prof.</th>
                 <th>Agend. Livre</th>

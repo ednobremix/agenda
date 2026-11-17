@@ -13,47 +13,11 @@ import (
 )
 
 func HandleRegister(w http.ResponseWriter, r *http.Request) {
-	var u common_models.User
-	if err := json.NewDecoder(r.Body).Decode(&u); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	u.Role = "user"
-	if err := common_models.GORM.Create(&u).Error; err != nil {
-		if strings.Contains(err.Error(), "UNIQUE constraint failed") || strings.Contains(err.Error(), "duplicate key") {
-			http.Error(w, "E-mail ou Usuário já cadastrado", http.StatusConflict)
-			return
-		}
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	// Enviar notificação para o admin
-	go common_utils.SendAdminNotification(u)
-
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(u)
+	http.Error(w, "O cadastro manual está desativado. Utilize o login via Google na página inicial.", http.StatusForbidden)
 }
 
 func HandleLogin(w http.ResponseWriter, r *http.Request) {
-	var credentials struct {
-		Email    string `json:"email"`
-		Password string `json:"password"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&credentials); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	var u common_models.User
-	err := common_models.GORM.Where("email = ? AND password = ?", credentials.Email, credentials.Password).First(&u).Error
-	if err != nil {
-		http.Error(w, "Credenciais inválidas", http.StatusUnauthorized)
-		return
-	}
-
-	json.NewEncoder(w).Encode(u)
+	http.Error(w, "O login manual está desativado. Utilize o login via Google.", http.StatusForbidden)
 }
 
 func HandleGoogleAuth(w http.ResponseWriter, r *http.Request) {
@@ -147,29 +111,7 @@ func HandleMe(w http.ResponseWriter, r *http.Request) {
 }
 
 func HandleUpdatePassword(w http.ResponseWriter, r *http.Request) {
-	email := r.URL.Query().Get("email")
-	var data struct {
-		CurrentPassword string `json:"current_password"`
-		NewPassword     string `json:"new_password"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	var u common_models.User
-	err := common_models.GORM.Where("email = ? AND password = ?", email, data.CurrentPassword).First(&u).Error
-	if err != nil {
-		http.Error(w, "Senha atual incorreta", http.StatusUnauthorized)
-		return
-	}
-
-	u.Password = data.NewPassword
-	if err := common_models.GORM.Save(&u).Error; err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	w.WriteHeader(http.StatusOK)
+	http.Error(w, "A alteração de senha manual está desativada. Sua conta é gerida via Google Auth.", http.StatusForbidden)
 }
 
 func HandleLinkGoogle(w http.ResponseWriter, r *http.Request) {
