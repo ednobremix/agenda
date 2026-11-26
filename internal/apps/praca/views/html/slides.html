@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Expositor de Fotos - Praça</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#4a7c59">
+  <link rel="apple-touch-icon" href="/assets/logo.png">
+</head>
+<body>
+  <div class="app-container praca-slides-container">
+    <div class="top-actions-left">
+      <a href="/praca/html/index.html" class="btn-icon shadow-sm" title="Voltar para a Praça">← Praça</a>
+    </div>
+
+    <div class="top-actions">
+      <a href="/praca/html/ajuda.html" class="btn-icon shadow-sm" title="Ajuda">❓</a>
+      <a href="/" class="btn-icon shadow-sm" title="Voltar ao Portal">🏠</a>
+    </div>
+
+    <header>
+      <div class="logo-box praca-logo">🖼️</div>
+      <h1>Expositor de Fotos</h1>
+      <p>Apresentação em slides compartilhada com todos os visitantes</p>
+    </header>
+
+    <div id="slides-toolbar" class="slides-toolbar hidden">
+      <button id="btn-open-upload" class="btn-wide bg-primary shadow-sm">+ Adicionar Fotos</button>
+    </div>
+
+    <!-- Palco do Slideshow -->
+    <section id="slideshow-stage" class="slideshow-stage shadow-sm hidden">
+      <div class="stage-frame" id="stage-frame">
+        <img id="slide-image" src="" alt="Foto do slide">
+        <button id="btn-prev" class="nav-arrow nav-prev" title="Anterior (←)">◀</button>
+        <button id="btn-next" class="nav-arrow nav-next" title="Próxima (→)">▶</button>
+        <div class="slide-counter" id="slide-counter">1 / 1</div>
+        <div class="slide-overlay-info" id="slide-overlay-info">
+          <h2 id="slide-title"></h2>
+          <p id="slide-caption"></p>
+        </div>
+        <div class="slide-progress-track">
+          <div class="slide-progress-bar" id="slide-progress-bar"></div>
+        </div>
+      </div>
+
+      <div class="stage-controls">
+        <button id="btn-play-pause" class="ctrl-btn" title="Iniciar/Pausar (Espaço)">▶ Reproduzir</button>
+        <select id="interval-select" class="ctrl-select" title="Tempo por slide">
+          <option value="3000">3s</option>
+          <option value="5000" selected>5s</option>
+          <option value="10000">10s</option>
+          <option value="15000">15s</option>
+        </select>
+        <button id="btn-shuffle" class="ctrl-btn" title="Modo Aleatório">🔀 Aleatório</button>
+        <button id="btn-fullscreen" class="ctrl-btn" title="Tela Cheia (F)">⛶ Tela Cheia</button>
+      </div>
+    </section>
+
+    <!-- Estado Vazio -->
+    <section id="empty-state" class="empty-state shadow-sm hidden">
+      <div style="font-size: 3rem; margin-bottom: 0.75rem;">📷</div>
+      <h3>Nenhuma foto no expositor ainda</h3>
+      <p id="empty-state-msg">Em breve novas fotos aparecerão aqui!</p>
+    </section>
+
+    <!-- Miniaturas -->
+    <section id="thumbnails-section" class="thumbnails-section hidden">
+      <div class="thumbnails-header">
+        <h3>Fotos na Galeria (<span id="total-count">0</span>)</h3>
+      </div>
+      <div id="thumbnails-grid" class="thumbnails-grid"></div>
+    </section>
+  </div>
+
+  <!-- Modal de Upload -->
+  <div id="upload-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <span id="btn-close-modal" class="close-x">&times;</span>
+      <h2 style="margin-bottom: 1rem;">Adicionar Fotos aos Slides</h2>
+      <form id="upload-form">
+        <div class="form-group">
+          <label for="photo-input">Imagens (JPG, PNG, WebP ou GIF — máx. 5 MB cada, pode selecionar várias)</label>
+          <input type="file" id="photo-input" name="images" accept="image/jpeg,image/png,image/webp,image/gif" multiple required>
+        </div>
+
+        <div id="preview-wrapper" class="preview-wrapper hidden">
+          <div id="preview-count" class="preview-count"></div>
+          <div id="preview-grid" class="preview-grid"></div>
+        </div>
+
+        <div class="form-group">
+          <label for="photo-title">Título (opcional)</label>
+          <input type="text" id="photo-title" name="title" maxlength="100" placeholder="Ex.: Pôr do sol na praça">
+        </div>
+
+        <div class="form-group">
+          <label for="photo-caption">Legenda (opcional)</label>
+          <input type="text" id="photo-caption" name="caption" maxlength="200" placeholder="Ex.: Registro especial de hoje">
+        </div>
+
+        <p id="upload-error" class="error-msg hidden"></p>
+
+        <button type="submit" id="btn-submit-upload" class="btn-wide bg-primary">Enviar Fotos</button>
+      </form>
+    </div>
+  </div>
+
+  <script src="../js/slides.js"></script>
+</body>
+</html>

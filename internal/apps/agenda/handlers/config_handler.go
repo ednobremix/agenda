@@ -3,13 +3,18 @@ package handlers
 import (
 	"encoding/json"
 	"massage-scheduler/internal/apps/agenda/services"
+	"massage-scheduler/internal/common/auth"
 	"massage-scheduler/internal/common/models"
 	"net/http"
 )
 
 func HandleGetConfig(w http.ResponseWriter, r *http.Request) {
-	email := r.URL.Query().Get("email")
-	configData, err := services.GetConfig(email)
+	user, ok := auth.UserFromContext(r.Context())
+	if !ok {
+		http.Error(w, "Não autenticado", http.StatusUnauthorized)
+		return
+	}
+	configData, err := services.GetConfig(user.Email)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -19,14 +24,18 @@ func HandleGetConfig(w http.ResponseWriter, r *http.Request) {
 }
 
 func HandleSaveConfig(w http.ResponseWriter, r *http.Request) {
-	email := r.URL.Query().Get("email")
+	user, ok := auth.UserFromContext(r.Context())
+	if !ok {
+		http.Error(w, "Não autenticado", http.StatusUnauthorized)
+		return
+	}
 	var cfg common_models.Config
 	if err := json.NewDecoder(r.Body).Decode(&cfg); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	if err := services.SaveConfig(email, cfg); err != nil {
+	if err := services.SaveConfig(user.Email, cfg); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

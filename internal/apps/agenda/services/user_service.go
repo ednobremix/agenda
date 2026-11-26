@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"errors"
 	"massage-scheduler/internal/apps/agenda/decode"
 	"massage-scheduler/internal/common/models"
@@ -10,8 +11,8 @@ import (
 	"gorm.io/gorm"
 )
 
-func AuthenticateGoogle(credential string) (*common_models.User, error) {
-	claims, err := decode.DecodeGoogleToken(credential)
+func AuthenticateGoogle(ctx context.Context, credential string) (*common_models.User, error) {
+	claims, err := decode.DecodeGoogleToken(ctx, credential)
 	if err != nil {
 		return nil, err
 	}
@@ -42,7 +43,7 @@ func AuthenticateGoogle(credential string) (*common_models.User, error) {
 			if err := common_models.GORM.Create(&u).Error; err != nil {
 				return nil, err
 			}
-			go common_utils.SendAdminNotification(u)
+			common_utils.EnqueueAdminNotification(u)
 		}
 	} else if err != nil {
 		return nil, err
@@ -51,8 +52,8 @@ func AuthenticateGoogle(credential string) (*common_models.User, error) {
 	return &u, nil
 }
 
-func LinkGoogleAccount(email, credential string) error {
-	claims, err := decode.DecodeGoogleToken(credential)
+func LinkGoogleAccount(ctx context.Context, email, credential string) error {
+	claims, err := decode.DecodeGoogleToken(ctx, credential)
 	if err != nil {
 		return err
 	}

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"massage-scheduler/internal/apps/agenda/models"
 	"massage-scheduler/internal/apps/agenda/services"
+	"massage-scheduler/internal/common/auth"
 	"massage-scheduler/internal/common/models"
 	"net/http"
 )
@@ -89,10 +90,14 @@ func HandleUpdateUserPermission(w http.ResponseWriter, r *http.Request) {
 }
 
 func HandleDeleteUser(w http.ResponseWriter, r *http.Request) {
+	currentUser, ok := auth.UserFromContext(r.Context())
+	if !ok {
+		http.Error(w, "Não autenticado", http.StatusUnauthorized)
+		return
+	}
 	email := r.URL.Query().Get("email")
-	currentUserEmail := r.URL.Query().Get("admin_email")
 
-	if err := services.DeleteUser(email, currentUserEmail); err != nil {
+	if err := services.DeleteUser(email, currentUser.Email); err != nil {
 		if err.Error() == "email missing" ||
 			err.Error() == "não é possível excluir o administrador padrão" ||
 			err.Error() == "você não pode excluir a sua própria conta através do painel administrativo" {

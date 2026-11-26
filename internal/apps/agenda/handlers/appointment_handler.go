@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"massage-scheduler/internal/apps/agenda/services"
+	"massage-scheduler/internal/common/auth"
 	"massage-scheduler/internal/common/models"
 	"net/http"
 
@@ -11,8 +12,12 @@ import (
 )
 
 func HandleGetAppointments(w http.ResponseWriter, r *http.Request) {
-	email := r.URL.Query().Get("email")
-	apps, err := services.GetAppointments(email)
+	user, ok := auth.UserFromContext(r.Context())
+	if !ok {
+		http.Error(w, "Não autenticado", http.StatusUnauthorized)
+		return
+	}
+	apps, err := services.GetAppointments(user.Email)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -23,14 +28,18 @@ func HandleGetAppointments(w http.ResponseWriter, r *http.Request) {
 }
 
 func HandleSaveAppointments(w http.ResponseWriter, r *http.Request) {
-	email := r.URL.Query().Get("email")
+	user, ok := auth.UserFromContext(r.Context())
+	if !ok {
+		http.Error(w, "Não autenticado", http.StatusUnauthorized)
+		return
+	}
 	var apps []common_models.Appointment
 	if err := json.NewDecoder(r.Body).Decode(&apps); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	err := services.SaveAppointments(email, apps)
+	err := services.SaveAppointments(user.Email, apps)
 	if err != nil {
 		if errors.Is(err, gorm.ErrInvalidData) {
 			http.Error(w, "Agendamento livre desativado: limite de 1 agendamento por dia excedido.", http.StatusBadRequest)

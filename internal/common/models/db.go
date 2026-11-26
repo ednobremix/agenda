@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"time"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/driver/sqlite"
@@ -74,6 +75,16 @@ func InitDBWithName(dbName string) {
 		log.Fatalf("Failed to get underlying sql.DB: %v", err)
 	}
 
+	if GORM.Dialector.Name() == "sqlite" {
+		DB.SetMaxOpenConns(1)
+		if err := GORM.Exec("PRAGMA journal_mode=WAL;").Error; err != nil {
+			log.Printf("Aviso: erro ao ativar WAL no SQLite: %v", err)
+		}
+		if err := GORM.Exec("PRAGMA busy_timeout=5000;").Error; err != nil {
+			log.Printf("Aviso: erro ao configurar busy_timeout no SQLite: %v", err)
+		}
+	}
+
 	// Corrige bancos antigos onde appointments.id foi criado como bigint
 	if GORM.Dialector.Name() == "postgres" {
 		fixAppointmentIDColumn()
@@ -92,6 +103,10 @@ func InitDBWithName(dbName string) {
 		&Product{},
 		&ProductBatch{},
 		&StockMovement{},
+		&PracaSlide{},
+		&PracaGalleryConfig{},
+		&PracaRoom{},
+		&PracaArtwork{},
 	)
 	if err != nil {
 		log.Fatalf("Failed to auto migrate: %v", err)
@@ -107,43 +122,38 @@ func InitDBWithName(dbName string) {
 }
 
 func FixLegacyProducts() {
-	var products []Product
-	if err := GORM.Find(&products).Error; err != nil {
-		log.Printf("Erro ao buscar produtos para correção de lotes: %v", err)
+	res := GORM.Exec(`
+		INSERT INTO product_batches (created_at, product_id, quantity, value, production_cost)
+		SELECT ?, p.id, p.quantity, p.value, p.production_cost
+		FROM products p
+		WHERE p.quantity > 0
+		  AND p.deleted_at IS NULL
+		  AND NOT EXISTS (
+			SELECT 1 FROM product_batches pb WHERE pb.product_id = p.id
+		  )
+	`, time.Now())
+	if res.Error != nil {
+		log.Printf("Erro ao corrigir lotes de produtos legados: %v", res.Error)
 		return
 	}
-
-	for _, p := range products {
-		if p.Quantity <= 0 {
-			continue
-		}
-		var count int64
-		GORM.Model(&ProductBatch{}).Where("product_id = ?", p.ID).Count(&count)
-		if count == 0 {
-			log.Printf("Corrigindo produto legado %s (ID %d): criando lote inicial...\n", p.Name, p.ID)
-			batch := ProductBatch{
-				ProductID:      p.ID,
-				Quantity:       p.Quantity,
-				Value:          p.Value,
-				ProductionCost: p.ProductionCost,
-			}
-			if err := GORM.Create(&batch).Error; err != nil {
-				log.Printf("Erro ao criar lote para produto %d: %v", p.ID, err)
-			}
-		}
+	if res.RowsAffected > 0 {
+		log.Printf("Lotes iniciais criados em lote para %d produto(s) legado(s).", res.RowsAffected)
 	}
 }
 
 func seedAdmin() {
+	adminEmail := os.Getenv("ADMIN_EMAIL")
+	if adminEmail == "" {
+		adminEmail = "edynobre@gmail.com"
+	}
+
 	var admin User
-	// Garantir que edynobre@gmail.com tenha sempre a role admin
-	result := GORM.Where("email = ?", "edynobre@gmail.com").First(&admin)
+	result := GORM.Where("email = ?", adminEmail).First(&admin)
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		admin = User{
 			Name:     "Administrador",
 			Business: "Sistema",
-			Email:    "edynobre@gmail.com",
-			Password: "q1w2e3", // Em produção, use hash de senha!
+			Email:    adminEmail,
 			Role:     "admin",
 		}
 		if err := GORM.Create(&admin).Error; err != nil {
@@ -151,17 +161,9 @@ func seedAdmin() {
 		} else {
 			log.Println("Usuário admin criado com sucesso.")
 		}
-	} else {
-		// Se o usuário já existe, garantimos que ele seja admin
-		// e restauramos a senha padrão se for o admin conhecido,
-		// caso ele tenha sido vinculado ao Google e perdido a senha local.
-		// Decisão: Forçar a senha padrão no seedAdmin para o admin principal
-		// para garantir que ele sempre consiga logar manualmente.
-		GORM.Model(&admin).Updates(map[string]any{
-			"role":     "admin",
-			"password": "q1w2e3",
-		})
-		log.Println("Dados do usuário administrador edynobre@gmail.com verificados/atualizados.")
+	} else if admin.Role != "admin" {
+		GORM.Model(&admin).Update("role", "admin")
+		log.Println("Role de administrador verificada/atualizada.")
 	}
 }
 

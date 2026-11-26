@@ -174,3 +174,73 @@ type StockMovement struct {
 	BatchValue float64       `json:"batch_value"` // Valor do novo lote (para entrada)
 	Reason     string        `json:"reason"`
 }
+
+// PracaSlide representa uma foto exibida no expositor de slides da Praça
+type PracaSlide struct {
+	ID        uint           `json:"id,omitzero" gorm:"primaryKey"`
+	CreatedAt time.Time      `json:"created_at,omitzero"`
+	UpdatedAt time.Time      `json:"updated_at,omitzero"`
+	DeletedAt gorm.DeletedAt `json:"-" gorm:"index"`
+	Title     string         `json:"title"`
+	Caption   string         `json:"caption"`
+	MimeType  string         `json:"mime_type" gorm:"size:100;not null"`
+	ImageData []byte         `json:"-" gorm:"not null"`
+}
+
+// PracaGalleryConfig representa a configuração do espaço 3D da Galeria/Museu Virtual
+type PracaGalleryConfig struct {
+	ID        uint      `json:"id" gorm:"primaryKey"`
+	UpdatedAt time.Time `json:"updated_at"`
+	Title     string    `json:"title" gorm:"default:'Museu Virtual da Praça'"`
+	Subtitle  string    `json:"subtitle" gorm:"default:'Explore as obras pelas paredes da galeria 3D'"`
+	Template  string    `json:"template" gorm:"default:'classic'"` // classic, modern, dark
+}
+
+// PracaRoom representa uma sala modelável do Museu Virtual
+type PracaRoom struct {
+	ID              uint           `json:"id,omitzero" gorm:"primaryKey"`
+	CreatedAt       time.Time      `json:"created_at,omitzero"`
+	UpdatedAt       time.Time      `json:"updated_at,omitzero"`
+	DeletedAt       gorm.DeletedAt `json:"-" gorm:"index"`
+	Name            string         `json:"name" gorm:"not null"`
+	Description     string         `json:"description"`
+	Template        string         `json:"template" gorm:"size:20;default:'classic'"`
+	Width           int            `json:"width" gorm:"default:1200"`
+	Depth           int            `json:"depth" gorm:"default:1200"`
+	Height          int            `json:"height" gorm:"default:600"`
+	SortOrder       int            `json:"sort_order" gorm:"default:0"`
+	DoorNorthRoomID uint           `json:"door_north_room_id" gorm:"default:0"`
+	DoorEastRoomID  uint           `json:"door_east_room_id" gorm:"default:0"`
+	DoorSouthRoomID uint           `json:"door_south_room_id" gorm:"default:0"`
+	DoorWestRoomID  uint           `json:"door_west_room_id" gorm:"default:0"`
+	DoorNorthPosX   float64        `json:"door_north_pos_x" gorm:"default:82"`
+	DoorEastPosX    float64        `json:"door_east_pos_x" gorm:"default:82"`
+	DoorSouthPosX   float64        `json:"door_south_pos_x" gorm:"default:82"`
+	DoorWestPosX    float64        `json:"door_west_pos_x" gorm:"default:82"`
+}
+
+// PracaArtwork representa uma obra posicionada em uma parede da galeria 3D
+type PracaArtwork struct {
+	ID                uint           `json:"id,omitzero" gorm:"primaryKey"`
+	CreatedAt         time.Time      `json:"created_at,omitzero"`
+	UpdatedAt         time.Time      `json:"updated_at,omitzero"`
+	DeletedAt         gorm.DeletedAt `json:"-" gorm:"index"`
+	RoomID            uint           `json:"room_id" gorm:"index;default:1"`
+	SlideID           uint           `json:"slide_id" gorm:"index;not null"`
+	Wall              string         `json:"wall" gorm:"size:20;default:'north'"`       // north, east, south, west
+	PosX              float64        `json:"pos_x" gorm:"default:50"`                   // 10..90 (%)
+	PosY              float64        `json:"pos_y" gorm:"default:50"`                   // 25..75 (%)
+	Scale             string         `json:"scale" gorm:"size:20;default:'medium'"`     // small, medium, large
+	WidthPx           float64        `json:"width_px" gorm:"default:0"`                 // 0 = usa Scale; >0 = largura customizada (100..440)
+	FrameStyle        string         `json:"frame_style" gorm:"size:30;default:'classic-gold'"`
+	Title             string         `json:"title"`
+	Artist            string         `json:"artist"`
+	Year              string         `json:"year"`
+	Technique         string         `json:"technique"`
+	Dimensions        string         `json:"dimensions"`
+	Description       string         `json:"description" gorm:"type:text"`
+	ExternalLink      string         `json:"external_link"`
+	ExternalLinkLabel string         `json:"external_link_label"`
+}
+
+

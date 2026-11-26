@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agenda de Serviços</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="manifest" href="/agenda/manifest.json">
+  <meta name="theme-color" content="#4a7c59">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="agenda">
+  <link rel="apple-touch-icon" href="../assets/logo.png">
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+  <div id="app-content" class="hidden">
+    <div id="success-banner" class="hidden">
+    <span id="success-icon">✓</span>
+    <span id="success-message">Sessões criadas com sucesso!</span>
+  </div>
+
+  <div class="app-container">
+    <div class="top-actions">
+      <button id="btn-settings" class="btn-icon shadow-sm" title="Configurações">⚙️</button>
+      <a href="../admin.html" id="btn-admin" class="btn-icon shadow-sm btn-admin hidden" title="Administração">🛡️</a>
+      <button id="btn-help" class="btn-icon shadow-sm" title="Ajuda">❓</button>
+      <a href="/" class="btn-icon shadow-sm bg-none" title="Voltar ao Portal" style="text-decoration: none;">🏠</a>
+    </div>
+    <header>
+      <div class="flex justify-center items-center gap-3">
+        <div class="logo-box m-0">📅</div>
+        <h1 id="header-business-title">Agenda de Serviços</h1>
+      </div>
+      <p id="header-business-desc">Seus atendimentos organizados, com leveza.</p>
+      <p id="user-info" class="text-sm text-muted-foreground mt-2"></p>
+    </header>
+
+    <div class="finance-summary">
+      <div class="finance-card">
+        <span>Recebido</span>
+        <strong id="total-received">R$ 0,00</strong>
+      </div>
+      <div class="finance-card">
+        <span>A receber</span>
+        <strong id="total-pending">R$ 0,00</strong>
+      </div>
+    </div>
+
+    <div class="flex gap-2">
+      <button id="btn-new-appointment" class="btn-wide bg-primary shadow-sm flex-1">+ Serviço</button>
+      <button id="btn-new-payment-main" class="btn-wide bg-secondary shadow-sm flex-1">+ Pagamento</button>
+    </div>
+
+    <div class="view-switcher">
+      <button id="view-list-btn" class="view-btn active">📋 Lista</button>
+      <button id="view-calendar-btn" class="view-btn">🗓 Calendário</button>
+      <button id="view-payments-btn" class="view-btn hidden">💰 Pagamentos</button>
+    </div>
+
+    <!-- Visão Lista -->
+    <section id="view-list" class="">
+      <div class="filters shadow-sm">
+        <div class="flex flex-wrap gap-2 mb-2">
+          <div class="form-group flex-1 mb-0" style="min-width: 140px;">
+            <label>Quando</label>
+            <select id="filter-when">
+              <option value="all">Todas</option>
+              <option value="upcoming">Próximas</option>
+            </select>
+          </div>
+          <div class="form-group flex-1 mb-0" style="min-width: 140px;">
+            <label>Pagamento</label>
+            <select id="filter-payment">
+              <option value="all">Todos</option>
+              <option value="paid">Pagos</option>
+              <option value="unpaid">Não pagos</option>
+            </select>
+          </div>
+          <div class="form-group flex-1 mb-0" style="min-width: 140px;">
+            <label>Profissional</label>
+            <select id="filter-professional">
+              <option value="all">Todos</option>
+            </select>
+          </div>
+        </div>
+        <div class="flex justify-between items-center text-sm">
+          <span id="filter-count" class="text-muted-foreground">0 sessões encontradas</span>
+          <button id="btn-clear-filters" class="hidden" style="border: none; background: none; color: hsl(var(--primary)); cursor: pointer; font-weight: 500;">Limpar filtros</button>
+        </div>
+      </div>
+      
+      <div id="list-container">
+        <!-- Cards da lista -->
+      </div>
+    </section>
+
+    <!-- Visão Calendário -->
+    <section id="view-calendar" class="hidden">
+      <div class="calendar-controls shadow-sm p-2 rounded-lg mb-4 bg-white">
+        <div class="flex justify-center gap-1">
+          <button id="cal-view-month" class="view-btn-sm active">Mês</button>
+          <button id="cal-view-week" class="view-btn-sm">Semana</button>
+          <button id="cal-view-day" class="view-btn-sm">Dia</button>
+        </div>
+      </div>
+
+      <div class="calendar-header flex justify-between items-center mb-4">
+        <h2 id="calendar-title" style="font-size: 1.25rem;">Outubro de 2026</h2>
+        <div>
+          <button id="prev-period" class="p-2 bg-none border-none text-xl cursor-pointer">‹</button>
+          <button id="next-period" class="p-2 bg-none border-none text-xl cursor-pointer">›</button>
+        </div>
+      </div>
+      
+      <div id="calendar-view-container">
+        <!-- O conteúdo será gerado dinamicamente via JS -->
+      </div>
+      
+      <div class="legend">
+        <div class="legend-item"><span class="dot paid"></span> Pago</div>
+        <div class="legend-item"><span class="dot unpaid"></span> Não pago</div>
+      </div>
+
+      <div id="day-detail" class="hidden pt-6 mt-6" style="border-top: 1px solid hsl(var(--border));">
+        <h3 id="detail-date" class="text-base mb-4">12 de out. de 2026</h3>
+        <div id="detail-sessions">
+          <!-- Sessões do dia -->
+        </div>
+      </div>
+    </section>
+
+    <!-- Visão Pagamentos (Admin) -->
+    <section id="view-payments" class="hidden">
+      <div class="filters shadow-sm">
+        <div class="flex justify-between items-center mb-2">
+          <h3 class="text-sm font-semibold">Agendamentos de Pagamento</h3>
+          <button id="btn-payment-history-main" class="bg-none border-none text-primary cursor-pointer text-xs">Ver Histórico</button>
+        </div>
+        <div class="text-xs text-muted-foreground">
+          Acompanhe os pagamentos das empresas cadastradas.
+        </div>
+      </div>
+      <div id="payment-list-container">
+        <!-- Preenchido via JS -->
+      </div>
+    </section>
+  </div>
+
+  <!-- Modal de Agendamento -->
+  <div id="modal-overlay" class="modal-overlay hidden">
+    <div class="modal-card">
+      <span id="close-modal" class="close-x">✕</span>
+      <h2 class="mb-6 text-xl">Novo Agendamento</h2>
+      
+      <form id="appointment-form">
+        <div class="form-group">
+          <label for="patient">Nome do Cliente</label>
+          <input type="text" id="patient" required placeholder="Ex.: Maria Silva">
+        </div>
+        <div class="form-group">
+          <label for="therapist">Nome do Profissional</label>
+          <select id="therapist" required>
+            <!-- Opções dinâmicas -->
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="type">Tipo de Serviço</label>
+          <select id="type" required>
+            <!-- Opções dinâmicas -->
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="value">Valor da Sessão (R$)</label>
+          <input type="text" id="value" required placeholder="150,00">
+        </div>
+        <div class="form-group">
+          <label for="duration">Duração (minutos)</label>
+          <input type="number" id="duration" required placeholder="60">
+        </div>
+        <div class="form-group">
+          <label for="datetime">Data e Horário</label>
+          <input type="datetime-local" id="datetime" required>
+        </div>
+        
+        <div class="form-group">
+          <label>Pagamento</label>
+          <div class="toggle-group">
+            <button type="button" class="toggle-btn" data-value="true" id="pay-true">✓ Pago</button>
+            <button type="button" class="toggle-btn" data-value="false" id="pay-false">● Não pago</button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Repetir</label>
+          <div class="toggle-group">
+            <button type="button" class="toggle-btn" data-repeat="none">Não repetir</button>
+            <button type="button" class="toggle-btn" data-repeat="weekly">Semanal</button>
+            <button type="button" class="toggle-btn" data-repeat="biweekly">Quinzenal</button>
+            <button type="button" class="toggle-btn" data-repeat="monthly">Mensal</button>
+          </div>
+        </div>
+
+        <div id="repeat-options" class="hidden">
+          <div class="form-group">
+            <label for="repeat-count">Quantas sessões?</label>
+            <input type="number" id="repeat-count" min="2" max="24" value="4">
+          </div>
+          <p id="repeat-info" class="text-xs text-muted-foreground mb-4"></p>
+        </div>
+
+        <div id="conflict-box" class="conflict-box hidden">
+          <h3 id="conflict-title">⚠️ Conflito de horário</h3>
+          <div id="conflict-list" class="conflict-list"></div>
+          <label class="flex items-center gap-2 text-sm cursor-pointer">
+            <input type="checkbox" id="force-schedule"> Agendar mesmo assim
+          </label>
+        </div>
+
+        <p id="form-error" class="error-msg hidden">Preencha todos os campos corretamente.</p>
+        
+        <button type="submit" id="btn-confirm" class="btn-wide bg-primary shadow-sm">Confirmar Agendamento</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal de Configurações -->
+  <div id="settings-overlay" class="modal-overlay hidden">
+    <div class="modal-card">
+      <span id="close-settings" class="close-x">✕</span>
+      <h2 class="mb-6 text-xl">Configurações do App</h2>
+      
+      <form id="settings-form">
+        <div class="form-group">
+          <label for="config-business-type">Ramo de Trabalho (ex: Massoterapia, Barbearia, Psicologia)</label>
+          <input type="text" id="config-business-type" required placeholder="Ex.: Massoterapia">
+        </div>
+        
+        <div class="form-group">
+          <label>Profissionais</label>
+          <div id="professionals-list">
+            <!-- Lista dinâmica de profissionais -->
+          </div>
+          <button type="button" id="btn-add-professional" class="btn-wide bg-secondary mt-2 p-2">+ Adicionar Profissional</button>
+          <p id="multiple-professionals-warning" class="hidden text-xs text-destructive mt-2">O cadastro de múltiplos profissionais está bloqueado pelo administrador.</p>
+        </div>
+        
+        <div class="form-group">
+          <label>Serviços, Valores e Duração (min)</label>
+          <div id="services-list">
+            <!-- Lista dinâmica de serviços -->
+          </div>
+          <button type="button" id="btn-add-service" class="btn-wide bg-secondary mt-2 p-2">+ Adicionar Serviço</button>
+        </div>
+
+        <div class="mt-6 border-top-border pt-4">
+          <button type="button" id="btn-toggle-security" class="btn-wide bg-secondary shadow-sm flex justify-between items-center p-3">
+            <span class="font-semibold">🛡️ Segurança e Conta</span>
+            <span id="security-toggle-icon">▼</span>
+          </button>
+          
+          <div id="security-section" class="hidden mt-4 p-2 border-border rounded-lg">
+            <div id="google-logged-message" class="hidden p-4 text-center">
+              <p class="font-bold text-primary">LOGIN COM A CONTA GOOGLE</p>
+              <p class="text-xs text-muted-foreground mt-1">Você está autenticado via Google. As opções de senha e vínculo manual não estão disponíveis.</p>
+            </div>
+  
+            <div id="google-link-section" class="flex flex-col gap-2 mt-4 p-4 bg-muted rounded-lg">
+              <p class="text-sm font-semibold">Vínculo com Google</p>
+              <p id="google-link-status" class="text-xs text-muted-foreground">Sua conta não está vinculada ao Google.</p>
+              <div id="google-link-btn-container">
+                <!-- Botão do Google será renderizado aqui -->
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <button type="submit" id="btn-save-settings" class="btn-wide bg-primary shadow-sm mt-4">Salvar Configurações</button>
+      </form>
+    </div>
+  </div>
+
+  </div> <!-- Fim de app-content -->
+
+  <script src="../js/script.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then(reg => console.log('Service Worker registrado!', reg))
+          .catch(err => console.log('Falha ao registrar Service Worker:', err));
+      });
+    }
+  </script>
+</body>
+</html>

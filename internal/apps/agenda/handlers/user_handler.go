@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"massage-scheduler/internal/apps/agenda/models"
 	"massage-scheduler/internal/apps/agenda/services"
+	"massage-scheduler/internal/common/auth"
 	"net/http"
 )
 
@@ -22,25 +23,30 @@ func HandleGoogleAuth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := services.AuthenticateGoogle(data.Credential)
+	user, err := services.AuthenticateGoogle(r.Context(), data.Credential)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
 
+	if err := auth.SetSessionCookie(w, r, user.Email, user.Role); err != nil {
+		http.Error(w, "Erro ao criar sessão", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(user)
 }
 
-func HandleMe(w http.ResponseWriter, r *http.Request) {
-	email := r.URL.Query().Get("email")
-	if email == "" {
-		http.Error(w, "Email missing", http.StatusBadRequest)
-		return
-	}
+func HandleLogout(w http.ResponseWriter, r *http.Request) {
+	auth.ClearSessionCookie(w, r)
+	w.WriteHeader(http.StatusOK)
+}
 
-	user, err := services.GetUserByEmail(email)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
+func HandleMe(w http.ResponseWriter, r *http.Request) {
+	user, ok := auth.UserFromContext(r.Context())
+	if !ok {
+		http.Error(w, "Não autenticado", http.StatusUnauthorized)
 		return
 	}
 
@@ -53,14 +59,19 @@ func HandleUpdatePassword(w http.ResponseWriter, r *http.Request) {
 }
 
 func HandleLinkGoogle(w http.ResponseWriter, r *http.Request) {
-	email := r.URL.Query().Get("email")
+	user, ok := auth.UserFromContext(r.Context())
+	if !ok {
+		http.Error(w, "Não autenticado", http.StatusUnauthorized)
+		return
+	}
+
 	var data models.LinkGoogleRequest
 	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	err := services.LinkGoogleAccount(email, data.Credential)
+	err := services.LinkGoogleAccount(r.Context(), user.Email, data.Credential)
 	if err != nil {
 		if err.Error() == "usuário não encontrado" {
 			http.Error(w, err.Error(), http.StatusNotFound)
