@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>agenda - Login</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="manifest" href="/agenda/manifest.json">
+  <meta name="theme-color" content="#4a7c59">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="agenda">
+  <link rel="apple-touch-icon" href="../assets/logo.png">
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+  <div style="position: absolute; top: 1rem; right: 1rem;">
+    <button onclick="clearCache()" class="btn-icon border-border rounded-lg p-2 flex items-center cursor-pointer bg-white" title="Limpar Cache">🧹 Limpar Cache</button>
+  </div>
+  <div id="auth-container" class="auth-container">
+    <div id="login-card" class="modal-card">
+      <div class="logo-box">📅</div>
+      <h2>Agenda de Serviços</h2>
+      <p class="text-center text-muted-foreground mb-6">Seus atendimentos organizados, com leveza.</p>
+      
+      <div id="google-login-btn" class="flex justify-center mt-6"></div>
+      
+      <p class="mt-4 text-center text-sm">
+        Para cadastrar sua empresa, acesse a página inicial e utilize o login do Google.
+      </p>
+
+      <p class="mt-6 text-center text-sm">
+        <a href="/" class="text-muted-foreground" style="text-decoration: none;">← Voltar ao Início</a>
+      </p>
+    </div>
+  </div>
+
+  <script src="../js/login.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then(reg => console.log('Service Worker registrado!', reg))
+          .catch(err => console.log('Falha ao registrar Service Worker:', err));
+      });
+    }
+  </script>
+</body>
+</html>

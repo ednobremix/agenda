@@ -1,12 +1,112 @@
 package common_utils
 
 import (
+	"context"
+	"crypto/tls"
 	"fmt"
 	"log"
 	"massage-scheduler/internal/common/models"
+	"net"
 	"net/smtp"
 	"os"
+	"sync"
+	"time"
 )
+
+const smtpTimeout = 15 * time.Second
+
+var (
+	notifyOnce sync.Once
+	notifyCh   chan common_models.User
+	notifyWG   sync.WaitGroup
+	notifyStop sync.Once
+)
+
+func ensureNotificationWorker() {
+	notifyOnce.Do(func() {
+		notifyCh = make(chan common_models.User, 64)
+		notifyWG.Add(1)
+		go func() {
+			defer notifyWG.Done()
+			for u := range notifyCh {
+				SendAdminNotification(u)
+			}
+		}()
+	})
+}
+
+func EnqueueAdminNotification(newUser common_models.User) {
+	ensureNotificationWorker()
+	select {
+	case notifyCh <- newUser:
+	default:
+		log.Printf("Fila de notificações cheia; pulando e-mail para novo usuário: %s", newUser.Email)
+	}
+}
+
+func ShutdownNotifications(ctx context.Context) {
+	if notifyCh == nil {
+		return
+	}
+	notifyStop.Do(func() {
+		close(notifyCh)
+	})
+	done := make(chan struct{})
+	go func() {
+		notifyWG.Wait()
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-ctx.Done():
+		log.Println("Timeout aguardando envio de notificações pendentes.")
+	}
+}
+
+func sendMailWithTimeout(addr, host string, auth smtp.Auth, from string, to []string, msg []byte) error {
+	conn, err := net.DialTimeout("tcp", addr, 10*time.Second)
+	if err != nil {
+		return err
+	}
+	_ = conn.SetDeadline(time.Now().Add(smtpTimeout))
+
+	c, err := smtp.NewClient(conn, host)
+	if err != nil {
+		_ = conn.Close()
+		return err
+	}
+	defer c.Close()
+
+	if ok, _ := c.Extension("STARTTLS"); ok {
+		if err := c.StartTLS(&tls.Config{ServerName: host}); err != nil {
+			return err
+		}
+	}
+	if auth != nil {
+		if err := c.Auth(auth); err != nil {
+			return err
+		}
+	}
+	if err := c.Mail(from); err != nil {
+		return err
+	}
+	for _, rcpt := range to {
+		if err := c.Rcpt(rcpt); err != nil {
+			return err
+		}
+	}
+	w, err := c.Data()
+	if err != nil {
+		return err
+	}
+	if _, err := w.Write(msg); err != nil {
+		return err
+	}
+	if err := w.Close(); err != nil {
+		return err
+	}
+	return c.Quit()
+}
 
 func SendAdminNotification(newUser common_models.User) {
 	adminEmail := os.Getenv("ADMIN_EMAIL")
@@ -40,7 +140,7 @@ func SendAdminNotification(newUser common_models.User) {
 		body + "\r\n")
 
 	auth := smtp.PlainAuth("", smtpUser, smtpPass, smtpHost)
-	err := smtp.SendMail(smtpHost+":"+smtpPort, auth, smtpUser, []string{adminEmail}, msg)
+	err := sendMailWithTimeout(net.JoinHostPort(smtpHost, smtpPort), smtpHost, auth, smtpUser, []string{adminEmail}, msg)
 	if err != nil {
 		log.Printf("Erro ao enviar e-mail de notificação: %v", err)
 	} else {

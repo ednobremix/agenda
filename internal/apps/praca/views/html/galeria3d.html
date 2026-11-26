@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Galeria 3D & Museu Virtual - Praça</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="../css/galeria3d.css">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#4a7c59">
+  <link rel="apple-touch-icon" href="/assets/logo.png">
+</head>
+<body class="museum-body template-classic">
+  <!-- Barra Superior -->
+  <header class="museum-hud-top">
+    <div class="hud-left">
+      <a href="/praca/html/index.html" class="hud-btn" title="Voltar para a Praça">← Praça</a>
+      <div class="hud-title-box">
+        <h1 id="exhibition-title">Museu Virtual da Praça</h1>
+        <p id="exhibition-subtitle">Explore as obras pelas paredes da galeria 3D</p>
+      </div>
+    </div>
+
+    <div class="hud-right">
+      <button id="btn-share" class="hud-btn" title="Compartilhar link da exposição">🔗 Compartilhar</button>
+      <button id="btn-admin-rooms" class="hud-btn hud-btn-admin hidden" title="Modelar Salas do Museu">🏛️ Salas</button>
+      <button id="btn-admin-edit-mode" class="hud-btn hud-btn-admin hidden" title="Arrastar e redimensionar obras na parede">✋ Editar Paredes</button>
+      <button id="btn-admin-config" class="hud-btn hud-btn-admin hidden" title="Configurar Espaço">⚙️ Espaço</button>
+      <button id="btn-admin-add" class="hud-btn hud-btn-primary hidden" title="Posicionar Obra">+ Obra</button>
+      <a href="/praca/html/ajuda.html" class="hud-btn" title="Ajuda">❓</a>
+      <a href="/" class="hud-btn" title="Portal">🏠</a>
+    </div>
+  </header>
+
+  <div id="edit-mode-banner" class="edit-mode-banner hidden">
+    ✋ <strong>Modo Edição:</strong> Arraste obras ou portas na parede para posicionar, ou puxe ↘ para redimensionar.
+  </div>
+
+  <!-- Viewport 3D -->
+  <main id="museum-viewport" class="museum-viewport" aria-label="Galeria 3D Interativa">
+    <div id="museum-camera" class="museum-camera">
+      <div id="museum-world" class="museum-world">
+        <div class="museum-ceiling"></div>
+        <div class="museum-floor"></div>
+        <div class="museum-wall wall-north" data-wall="north">
+          <span class="wall-label">Parede Norte</span>
+        </div>
+        <div class="museum-wall wall-east" data-wall="east">
+          <span class="wall-label">Parede Leste</span>
+        </div>
+        <div class="museum-wall wall-south" data-wall="south">
+          <span class="wall-label">Parede Sul</span>
+        </div>
+        <div class="museum-wall wall-west" data-wall="west">
+          <span class="wall-label">Parede Oeste</span>
+        </div>
+      </div>
+    </div>
+
+    <div id="museum-empty-hint" class="museum-empty-hint hidden">
+      <span>🏛️ A exposição ainda está sendo montada.</span>
+    </div>
+  </main>
+
+  <!-- Controles Inferiores (Multiplataforma) -->
+  <footer class="museum-hud-bottom">
+    <div class="wall-nav-group">
+      <select id="room-select" class="room-select" title="Selecionar Sala"></select>
+      <button class="wall-btn active" data-focus-wall="north">Norte</button>
+      <button class="wall-btn" data-focus-wall="east">Leste</button>
+      <button class="wall-btn" data-focus-wall="south">Sul</button>
+      <button class="wall-btn" data-focus-wall="west">Oeste</button>
+      <button id="btn-tour" class="wall-btn" title="Tour guiado pelas obras">🧭 Tour</button>
+    </div>
+
+    <div class="move-pad" aria-label="Controles de movimento">
+      <button class="pad-btn" id="pad-left" title="Esquerda (A)">◀</button>
+      <button class="pad-btn" id="pad-forward" title="Avançar (W)">▲</button>
+      <button class="pad-btn" id="pad-back" title="Recuar (S)">▼</button>
+      <button class="pad-btn" id="pad-right" title="Direita (D)">▶</button>
+    </div>
+  </footer>
+
+  <!-- Toast de Compartilhamento -->
+  <div id="share-toast" class="share-toast hidden">Link copiado para compartilhar!</div>
+
+  <!-- Modal Ficha Técnica (Visitante & Admin) -->
+  <div id="artwork-detail-modal" class="modal-overlay hidden">
+    <div class="modal-card detail-modal-card">
+      <span id="close-detail-modal" class="close-x">&times;</span>
+      <div class="detail-image-box">
+        <img id="detail-image" src="" alt="Obra">
+      </div>
+      <div class="detail-info">
+        <div class="detail-plaque">
+          <h2 id="detail-title"></h2>
+          <p id="detail-artist-year" class="detail-meta"></p>
+          <p id="detail-tech-dim" class="detail-submeta"></p>
+        </div>
+        <p id="detail-description" class="detail-description"></p>
+        <div class="detail-actions">
+          <a id="detail-external-link" href="#" target="_blank" rel="noopener noreferrer" class="btn-wide bg-primary hidden" style="text-align:center;text-decoration:none;"></a>
+          <div id="detail-admin-actions" class="detail-admin-actions hidden">
+            <button id="btn-edit-artwork" class="ctrl-btn">✏️ Editar Obra</button>
+            <button id="btn-delete-artwork" class="ctrl-btn ctrl-danger">🗑️ Remover da Parede</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Configuração do Espaço (Apenas Admin) -->
+  <div id="config-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <span id="close-config-modal" class="close-x">&times;</span>
+      <h2 style="margin-bottom: 1rem;">Configurar Espaço da Exposição</h2>
+      <form id="config-form">
+        <div class="form-group">
+          <label for="cfg-title">Título da Exposição</label>
+          <input type="text" id="cfg-title" maxlength="100" required>
+        </div>
+        <div class="form-group">
+          <label for="cfg-subtitle">Subtítulo / Boas-vindas</label>
+          <input type="text" id="cfg-subtitle" maxlength="180">
+        </div>
+        <div class="form-group">
+          <label for="cfg-template">Template do Espaço</label>
+          <select id="cfg-template">
+            <option value="classic">🏛️ Museu Clássico (Paredes creme e piso de madeira)</option>
+            <option value="modern">🖼️ Galeria Moderna (Cubo branco e cimento queimado)</option>
+            <option value="dark">🌙 Galeria Noturna (Paredes grafite e iluminação dramática)</option>
+          </select>
+        </div>
+        <button type="submit" class="btn-wide bg-primary">Salvar Espaço</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Adicionar / Editar Obra na Parede (Apenas Admin) -->
+  <div id="artwork-form-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <span id="close-artwork-form-modal" class="close-x">&times;</span>
+      <h2 id="artwork-form-heading" style="margin-bottom: 1rem;">Posicionar Obra na Parede</h2>
+      <form id="artwork-form">
+        <input type="hidden" id="art-id">
+
+        <div class="form-group">
+          <label>Imagem da Obra</label>
+          <div class="source-tabs">
+            <button type="button" class="source-tab active" data-src="existing">Da Galeria</button>
+            <button type="button" class="source-tab" data-src="upload">Enviar Nova</button>
+          </div>
+          <div id="src-existing-box">
+            <select id="art-slide-id"></select>
+          </div>
+          <div id="src-upload-box" class="hidden">
+            <input type="file" id="art-file-input" accept="image/jpeg,image/png,image/webp,image/gif">
+          </div>
+        </div>
+
+        <div class="form-row-2">
+          <div class="form-group">
+            <label for="art-room-id">Sala</label>
+            <select id="art-room-id"></select>
+          </div>
+          <div class="form-group">
+            <label for="art-wall">Parede</label>
+            <select id="art-wall">
+              <option value="north">Norte</option>
+              <option value="east">Leste</option>
+              <option value="south">Sul</option>
+              <option value="west">Oeste</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="art-frame">Moldura</label>
+          <select id="art-frame">
+            <option value="classic-gold">Dourada Clássica</option>
+            <option value="dark-wood">Madeira Escura</option>
+            <option value="modern-black">Preta Minimalista</option>
+            <option value="gallery-white">Branca Museu</option>
+            <option value="none">Sem Moldura</option>
+          </select>
+        </div>
+
+        <div class="form-row-2">
+          <div class="form-group">
+            <label for="art-posx">Posição Horizontal (<span id="posx-val">50</span>%)</label>
+            <input type="range" id="art-posx" min="15" max="85" value="50">
+          </div>
+          <div class="form-group">
+            <label for="art-posy">Altura na Parede (<span id="posy-val">48</span>%)</label>
+            <input type="range" id="art-posy" min="30" max="68" value="48">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="art-scale">Tamanho da Obra</label>
+          <select id="art-scale">
+            <option value="small">Pequena</option>
+            <option value="medium" selected>Média</option>
+            <option value="large">Grande</option>
+          </select>
+        </div>
+
+        <hr style="margin: 0.75rem 0; border: none; border-top: 1px solid hsl(var(--border));">
+
+        <div class="form-group">
+          <label for="art-title">Título / Etiqueta</label>
+          <input type="text" id="art-title" maxlength="100" placeholder="Ex.: Aurora na Praça" required>
+        </div>
+
+        <div class="form-row-2">
+          <div class="form-group">
+            <label for="art-artist">Artista / Autor</label>
+            <input type="text" id="art-artist" maxlength="80" placeholder="Nome do artista">
+          </div>
+          <div class="form-group">
+            <label for="art-year">Ano</label>
+            <input type="text" id="art-year" maxlength="20" placeholder="2026">
+          </div>
+        </div>
+
+        <div class="form-row-2">
+          <div class="form-group">
+            <label for="art-technique">Técnica / Material</label>
+            <input type="text" id="art-technique" maxlength="80" placeholder="Óleo sobre tela">
+          </div>
+          <div class="form-group">
+            <label for="art-dimensions">Dimensões</label>
+            <input type="text" id="art-dimensions" maxlength="50" placeholder="80 x 60 cm">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="art-description">Descrição Textual (Ficha Técnica)</label>
+          <textarea id="art-description" rows="3" maxlength="1000" placeholder="História, contexto ou detalhes da obra..."></textarea>
+        </div>
+
+        <div class="form-row-2">
+          <div class="form-group">
+            <label for="art-ext-link">Link Externo (opcional)</label>
+            <input type="url" id="art-ext-link" placeholder="https://...">
+          </div>
+          <div class="form-group">
+            <label for="art-ext-label">Texto do Link</label>
+            <input type="text" id="art-ext-label" maxlength="40" placeholder="Saiba mais">
+          </div>
+        </div>
+
+        <p id="artwork-form-error" class="error-msg hidden"></p>
+        <button type="submit" id="btn-save-artwork" class="btn-wide bg-primary">Salvar na Parede</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Modelador de Estrutura de Salas (Apenas Admin) -->
+  <div id="rooms-modal" class="modal-overlay hidden">
+    <div class="modal-card rooms-modal-card">
+      <span id="close-rooms-modal" class="close-x">&times;</span>
+      <div class="rooms-modal-header">
+        <h2>🏛️ Modelar Estrutura de Salas</h2>
+        <button type="button" id="btn-new-room" class="hud-btn hud-btn-primary">+ Nova Sala</button>
+      </div>
+
+      <div id="rooms-list" class="rooms-list"></div>
+
+      <form id="room-form" class="room-form">
+        <input type="hidden" id="room-id">
+        <div class="room-blueprint-box">
+          <div id="room-blueprint" class="room-blueprint">
+            <span class="bp-wall bp-n" id="bp-n">N</span>
+            <span class="bp-wall bp-e" id="bp-e">L</span>
+            <span class="bp-wall bp-s" id="bp-s">S</span>
+            <span class="bp-wall bp-w" id="bp-w">O</span>
+            <span id="bp-dims">1200 × 1200</span>
+          </div>
+        </div>
+
+        <div class="form-row-2">
+          <div class="form-group">
+            <label for="room-name">Nome da Sala</label>
+            <input type="text" id="room-name" maxlength="80" required placeholder="Ex.: Ala Contemporânea">
+          </div>
+          <div class="form-group">
+            <label for="room-template">Template Visual</label>
+            <select id="room-template">
+              <option value="classic">🏛️ Museu Clássico</option>
+              <option value="modern">🖼️ Galeria Moderna</option>
+              <option value="dark">🌙 Galeria Noturna</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="room-desc">Descrição da Sala</label>
+          <input type="text" id="room-desc" maxlength="160" placeholder="Opcional">
+        </div>
+
+        <div class="form-row-3">
+          <div class="form-group">
+            <label for="room-width">Largura (<span id="room-width-val">1200</span>)</label>
+            <input type="range" id="room-width" min="800" max="2000" step="100" value="1200">
+          </div>
+          <div class="form-group">
+            <label for="room-depth">Profundidade (<span id="room-depth-val">1200</span>)</label>
+            <input type="range" id="room-depth" min="800" max="2000" step="100" value="1200">
+          </div>
+          <div class="form-group">
+            <label for="room-height">Altura (<span id="room-height-val">600</span>)</label>
+            <input type="range" id="room-height" min="450" max="800" step="50" value="600">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Portas de Passagem para Outras Salas</label>
+          <div class="form-row-2">
+            <div><small>Parede Norte</small><select id="room-door-n"></select></div>
+            <div><small>Parede Leste</small><select id="room-door-e"></select></div>
+            <div><small>Parede Sul</small><select id="room-door-s"></select></div>
+            <div><small>Parede Oeste</small><select id="room-door-w"></select></div>
+          </div>
+        </div>
+
+        <div class="room-form-actions">
+          <button type="submit" class="btn-wide bg-primary">Salvar Sala</button>
+          <button type="button" id="btn-enter-room" class="ctrl-btn">🚪 Entrar</button>
+          <button type="button" id="btn-delete-room" class="ctrl-btn ctrl-danger">🗑️ Excluir</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="../js/galeria3d.js"></script>
+</body>
+</html>

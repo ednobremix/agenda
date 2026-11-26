@@ -1,0 +1,203 @@
+(function() {
+  const SESSION_KEY_AGENDA = 'portalnobre-session';
+  const SESSION_KEY_FINANCEIRO = 'financeiro_user';
+  const SESSION_KEY_ESTOQUE = 'estoque_user';
+  const USER_ID_FINANCEIRO = 'user_id';
+  const USERNAME_FINANCEIRO = 'username';
+  const CLIENT_ID = "665567298487-am8coo2krrd2msdno64p3ng5om1pfr75.apps.googleusercontent.com";
+
+  function checkAuth() {
+    const agendaUser = JSON.parse(localStorage.getItem(SESSION_KEY_AGENDA));
+    const financeiroUser = JSON.parse(localStorage.getItem(SESSION_KEY_FINANCEIRO));
+    const estoqueUser = JSON.parse(localStorage.getItem(SESSION_KEY_ESTOQUE));
+    const financeiroUserId = localStorage.getItem(USER_ID_FINANCEIRO);
+    const financeiroUsername = localStorage.getItem(USERNAME_FINANCEIRO);
+
+    const userBar = document.getElementById('user-bar');
+    const userNameElem = document.getElementById('user-name');
+    const authSection = document.getElementById('auth-section');
+    const registerText = document.getElementById('register-text');
+    
+    let loggedIn = false;
+    let name = '';
+    let isAdmin = false;
+
+    if (agendaUser) {
+      loggedIn = true;
+      name = agendaUser.name || agendaUser.email;
+      isAdmin = agendaUser.role === 'admin';
+    } else if (financeiroUser) {
+      loggedIn = true;
+      name = financeiroUser.name || financeiroUser.email;
+      isAdmin = financeiroUser.role === 'admin';
+    } else if (estoqueUser) {
+      loggedIn = true;
+      name = estoqueUser.name || estoqueUser.email;
+      isAdmin = estoqueUser.role === 'admin';
+    } else if (financeiroUserId && financeiroUsername) {
+      loggedIn = true;
+      name = financeiroUsername;
+      isAdmin = localStorage.getItem('role') === 'admin';
+    }
+
+    const agendaAppCard = document.getElementById('app-agenda');
+    const financeiroAppCard = document.getElementById('app-financeiro');
+    const estoqueAppCard = document.getElementById('app-estoque');
+
+    if (loggedIn) {
+      userBar.classList.remove('hidden');
+      if (authSection) authSection.classList.add('hidden');
+      if (registerText) registerText.classList.add('hidden');
+      userNameElem.textContent = isAdmin ? `👑 Administrador: ${name}` : `Olá, ${name}`;
+      
+      const userObj = agendaUser || financeiroUser || estoqueUser || (financeiroUserId ? { role: localStorage.getItem('role'), has_agenda: localStorage.getItem('has_agenda') === 'true', has_financeiro: localStorage.getItem('has_financeiro') === 'true', has_estoque: localStorage.getItem('has_estoque') === 'true' } : null);
+
+      const hasAgenda = isAdmin || (userObj && userObj.has_agenda);
+      const hasFinanceiro = isAdmin || (userObj && userObj.has_financeiro);
+      const hasEstoque = isAdmin || (userObj && userObj.has_estoque);
+
+      updateAppStatus(true, isAdmin, hasAgenda, hasFinanceiro, hasEstoque);
+      
+      if (hasAgenda) {
+        agendaAppCard.classList.remove('disabled');
+        agendaAppCard.style.pointerEvents = 'auto';
+        agendaAppCard.style.opacity = '1';
+      } else {
+        agendaAppCard.classList.add('disabled');
+        agendaAppCard.style.pointerEvents = 'none';
+        agendaAppCard.style.opacity = '0.5';
+      }
+
+      if (hasFinanceiro) {
+        financeiroAppCard.classList.remove('disabled');
+        financeiroAppCard.style.pointerEvents = 'auto';
+        financeiroAppCard.style.opacity = '1';
+      } else {
+        financeiroAppCard.classList.add('disabled');
+        financeiroAppCard.style.pointerEvents = 'none';
+        financeiroAppCard.style.opacity = '0.5';
+      }
+
+      if (hasEstoque) {
+        estoqueAppCard.classList.remove('disabled');
+        estoqueAppCard.style.pointerEvents = 'auto';
+        estoqueAppCard.style.opacity = '1';
+      } else {
+        estoqueAppCard.classList.add('disabled');
+        estoqueAppCard.style.pointerEvents = 'none';
+        estoqueAppCard.style.opacity = '0.5';
+      }
+    } else {
+      userBar.classList.add('hidden');
+      if (authSection) authSection.classList.remove('hidden');
+      if (registerText) registerText.classList.remove('hidden');
+      initGoogleAuth();
+      updateAppStatus(false);
+    }
+  }
+
+  function initGoogleAuth() {
+    if (typeof google === 'undefined') {
+      setTimeout(initGoogleAuth, 100);
+      return;
+    }
+
+    google.accounts.id.initialize({
+      client_id: CLIENT_ID,
+      callback: handleCredentialResponse,
+      auto_select: true
+    });
+
+    google.accounts.id.renderButton(
+      document.getElementById("google-login-btn"),
+      { theme: "outline", size: "large", width: 280 }
+    );
+  }
+
+  async function handleCredentialResponse(response) {
+    try {
+      const resp = await fetch('/agenda/api/auth/google', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ credential: response.credential })
+      });
+
+      if (resp.ok) {
+        const user = await resp.json();
+        // Salva em todas as chaves para compatibilidade
+        localStorage.setItem(SESSION_KEY_AGENDA, JSON.stringify(user));
+        localStorage.setItem(SESSION_KEY_FINANCEIRO, JSON.stringify(user));
+        localStorage.setItem(SESSION_KEY_ESTOQUE, JSON.stringify(user));
+        localStorage.setItem('role', user.role);
+        localStorage.setItem('has_agenda', user.has_agenda);
+        localStorage.setItem('has_financeiro', user.has_financeiro);
+        localStorage.setItem('has_estoque', user.has_estoque);
+        location.reload();
+      } else {
+        const errorText = await resp.text();
+        console.error('Erro Google Auth:', errorText);
+        alert('Erro na autenticação com Google.');
+      }
+    } catch (err) {
+      console.error('Erro na conexão com Google Auth:', err);
+    }
+  }
+
+  function updateAppStatus(isLoggedIn, isAdmin, hasAgenda, hasFinanceiro, hasEstoque) {
+    const agendaStatus = document.querySelector('#app-agenda .access-status');
+    const financeiroStatus = document.querySelector('#app-financeiro .access-status');
+    const estoqueStatus = document.querySelector('#app-estoque .access-status');
+
+    if (isLoggedIn) {
+      if (isAdmin) {
+        agendaStatus.textContent = '👑 Admin (Acesso Total)';
+        agendaStatus.style.color = 'hsl(var(--primary))';
+        financeiroStatus.textContent = '👑 Admin (Acesso Total)';
+        financeiroStatus.style.color = 'hsl(var(--primary))';
+        estoqueStatus.textContent = '👑 Admin (Acesso Total)';
+        estoqueStatus.style.color = 'hsl(var(--primary))';
+      } else {
+        agendaStatus.textContent = hasAgenda ? '✓ Acesso Liberado' : '🚫 Acesso Restrito';
+        agendaStatus.style.color = hasAgenda ? 'hsl(var(--primary))' : '#dc2626';
+        financeiroStatus.textContent = hasFinanceiro ? '✓ Acesso Liberado' : '🚫 Acesso Restrito';
+        financeiroStatus.style.color = hasFinanceiro ? 'hsl(var(--primary))' : '#dc2626';
+        estoqueStatus.textContent = hasEstoque ? '✓ Acesso Liberado' : '🚫 Acesso Restrito';
+        estoqueStatus.style.color = hasEstoque ? 'hsl(var(--primary))' : '#dc2626';
+      }
+    } else {
+      agendaStatus.textContent = '🔒 Requer Login';
+      financeiroStatus.textContent = '🔒 Requer Login';
+      estoqueStatus.textContent = '🔒 Requer Login';
+    }
+  }
+
+  window.clearCache = function() {
+    if (confirm('Deseja limpar todo o cache e dados locais? Isso fará você sair de todas as sessões.')) {
+      // Limpa Local Storage
+      localStorage.clear();
+      
+      // Limpa Caches do Browser (Service Worker Cache)
+      if ('caches' in window) {
+        caches.keys().then(names => {
+          for (let name of names) caches.delete(name);
+        });
+      }
+
+      // Desregistra Service Workers
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(registrations => {
+          for (let registration of registrations) {
+            registration.unregister();
+          }
+        });
+      }
+
+      // Recarrega a página limpando o cache do navegador
+      setTimeout(() => {
+        window.location.reload(true);
+      }, 500);
+    }
+  };
+
+  checkAuth();
+})();

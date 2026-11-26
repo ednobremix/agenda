@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ajuda - Estoque Nobre</title>
+  <link rel="stylesheet" href="/agenda/css/style.css">
+  <link rel="stylesheet" href="/financeiro/css/style.css">
+  <link rel="stylesheet" href="../css/ajuda.css">
+  <link rel="manifest" href="/estoque/manifest.json">
+  <meta name="theme-color" content="#4a7c59">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="agenda">
+  <link rel="apple-touch-icon" href="/agenda/assets/logo.png">
+</head>
+<body style="background-color: hsl(var(--muted));">
+  <div class="help-content">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+      <a href="/estoque/index.html" class="back-link" style="margin-bottom: 0;">← Voltar para o Estoque</a>
+      <a href="/" class="back-link" style="margin-bottom: 0; font-size: 0.875rem;">🏠 Home</a>
+    </div>
+    <div class="help-header">
+      <div class="logo-box" style="margin: 0 auto 1rem;">📦</div>
+      <h1>Como usar o Controle de Estoque</h1>
+    </div>
+
+    <div class="help-section">
+      <h2>O que é?</h2>
+      <p>Gerencie seus produtos, rastreando entradas e saídas com visão clara de custos e estoque atual.</p>
+    </div>
+
+    <div class="help-section">
+      <h2>Produtos e Lotes</h2>
+      <ul>
+        <li><strong>Novo Produto:</strong> Registre como <strong>Comprado</strong> (fornecedor) ou <strong>Criado</strong> (produção própria).</li>
+        <li><strong>Lotes:</strong> O sistema separa mercadorias por preço de custo, garantindo cálculos financeiros precisos.</li>
+      </ul>
+    </div>
+
+    <div class="help-section">
+      <h2>Movimentações</h2>
+      <ul>
+        <li><strong>Venda:</strong> Registra a saída para o cliente. O sistema usa <code>FIFO</code> (vende o lote mais antigo primeiro) para girar o estoque corretamente.</li>
+        <li><strong>Baixa:</strong> Use para registrar perdas, vencimentos ou consumo interno.</li>
+        <li><strong>Histórico:</strong> A aba "Movimentações" lista tudo o que entrou e saiu com filtros por período.</li>
+      </ul>
+    </div>
+
+    <div class="help-section">
+      <h2>Indicadores</h2>
+      <ul>
+        <li><strong>Estoque:</strong> Valor total que você tem investido em mercadorias.</li>
+        <li><strong>Vendas/Baixas:</strong> Totais financeiros do período selecionado.</li>
+        <li><strong>Estoque Mínimo:</strong> Filtro rápido para ver o que precisa ser reposto.</li>
+      </ul>
+    </div>
+
+    <div class="help-section">
+      <h2>Suporte e Contato</h2>
+      <p>Para suporte técnico, dúvidas ou sugestões, entre em contato:</p>
+      <p style="font-weight: 600; color: hsl(var(--primary)); text-align: center; margin-top: 1rem;">
+        <a href="mailto:edynobre@gmail.com" style="color: inherit; text-decoration: none;">edynobre@gmail.com</a>
+      </p>
+    </div>
+
+    <div style="text-align: center; margin-top: 3rem; color: hsl(var(--muted-foreground)); font-size: 0.875rem;">
+      <p>&copy; 2026 Controle de Estoque. Todos os direitos reservados.</p>
+    </div>
+  </div>
+</body>
+</html>

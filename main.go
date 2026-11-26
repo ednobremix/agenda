@@ -1,79 +1,113 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
-	"massage-scheduler/internal/apps/agenda/controllers"
+	agenda_routers "massage-scheduler/internal/apps/agenda/routers"
+	estoque_routers "massage-scheduler/internal/apps/estoque/routers"
+	financeiro_routers "massage-scheduler/internal/apps/financeiro/routers"
+	praca_routers "massage-scheduler/internal/apps/praca/routers"
 	"massage-scheduler/internal/common/models"
+	common_utils "massage-scheduler/internal/common/utils"
 )
 
 func main() {
 	// Inicializar Banco de Dados (Model)
 	common_models.InitDB()
 
-	// Configurar Rotas da API (Controller)
-	http.HandleFunc("POST /api/register", controllers.HandleRegister)
-	http.HandleFunc("POST /api/login", controllers.HandleLogin)
-	http.HandleFunc("POST /api/auth/google", controllers.HandleGoogleAuth)
-	http.HandleFunc("GET /api/config", controllers.HandleGetConfig)
-	http.HandleFunc("POST /api/config", controllers.HandleSaveConfig)
-	http.HandleFunc("GET /api/appointments", controllers.HandleGetAppointments)
-	http.HandleFunc("POST /api/appointments", controllers.HandleSaveAppointments)
-	http.HandleFunc("GET /api/admin/users", controllers.HandleAdminUsers)
-	http.HandleFunc("DELETE /api/admin/users", controllers.HandleDeleteUser)
-	http.HandleFunc("POST /api/admin/update-permission", controllers.HandleUpdateUserPermission)
-	http.HandleFunc("GET /api/admin/payments", controllers.HandleGetPayments)
-	http.HandleFunc("POST /api/admin/payments", controllers.HandleCreatePayment)
-	http.HandleFunc("PUT /api/admin/payments", controllers.HandleUpdatePayment)
-	http.HandleFunc("GET /api/me", controllers.HandleMe)
-	http.HandleFunc("POST /api/user/update-password", controllers.HandleUpdatePassword)
-	http.HandleFunc("POST /api/user/link-google", controllers.HandleLinkGoogle)
+	// Configurar Rotas das APIs
+	mux := http.DefaultServeMux
+	agenda_routers.RegisterAgendaRoutes(mux)
+	financeiro_routers.RegisterRoutes(mux)
+	estoque_routers.RegisterRoutes(mux)
+	praca_routers.RegisterRoutes(mux)
 
-	// Servir arquivos estáticos da Agenda
+	// Pré-instanciar servidores de arquivos estáticos
 	agendaFS := http.FileServer(http.Dir("internal/apps/agenda/views"))
-	http.Handle("/agenda/", http.StripPrefix("/agenda/", agendaFS))
-
-	// Servir arquivos estáticos do Financeiro (se a pasta existir)
-	financeiroPath := "../financeiro/frontend"
-	if _, err := os.Stat(financeiroPath); err == nil {
-		financeiroFS := http.FileServer(http.Dir(financeiroPath))
-		http.Handle("/financeiro/", http.StripPrefix("/financeiro/", financeiroFS))
-	}
-
-	// Para manter compatibilidade com links diretos como /agenda.html
-	http.HandleFunc("/agenda.html", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "internal/apps/agenda/views/agenda.html")
-	})
-	// Servir outros arquivos da agenda que podem estar na raiz da visualização (js, css)
-	// Como o script.js é referenciado como "script.js" no html, ele precisa ser servido.
-	// Se acessarmos /agenda.html, ele vai pedir /script.js
-	// Vou servir a pasta de views da agenda na raiz se não for outra rota
-
-	// Servir arquivos estáticos da Home e fallback para Agenda
+	financeiroFS := http.FileServer(http.Dir("internal/apps/financeiro/views"))
+	estoqueFS := http.FileServer(http.Dir("internal/apps/estoque/views"))
+	pracaFS := http.FileServer(http.Dir("internal/apps/praca/views"))
 	homeFS := http.FileServer(http.Dir("internal/apps/home/views"))
 
+	http.Handle("/agenda/", http.StripPrefix("/agenda/", agendaFS))
+	http.Handle("/financeiro/", http.StripPrefix("/financeiro/", financeiroFS))
+	http.Handle("/estoque/", http.StripPrefix("/estoque/", estoqueFS))
+	http.HandleFunc("/praca/", func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/praca/" {
+			http.Redirect(w, r, "/praca/html/index.html", http.StatusMovedPermanently)
+			return
+		}
+		http.StripPrefix("/praca/", pracaFS).ServeHTTP(w, r)
+	})
+
+	// Redirecionamentos de rotas legadas
+	redirects := map[string]string{
+		"/admin.html":            "/agenda/html/admin.html",
+		"/ajuda.html":            "/agenda/html/ajuda.html",
+		"/login.html":            "/agenda/html/login.html",
+		"/agenda/login.html":     "/agenda/html/login.html",
+		"/agenda/admin.html":     "/agenda/html/admin.html",
+		"/agenda/ajuda.html":     "/agenda/html/ajuda.html",
+		"/agenda/index.html":     "/agenda/html/index.html",
+		"/financeiro/login.html": "/financeiro/html/login.html",
+		"/financeiro/admin.html": "/financeiro/html/admin.html",
+		"/financeiro/ajuda.html": "/financeiro/html/ajuda.html",
+		"/financeiro/index.html": "/financeiro/html/index.html",
+		"/estoque/login.html":    "/estoque/html/login.html",
+		"/estoque/ajuda.html":    "/estoque/html/ajuda.html",
+		"/estoque/index.html":    "/estoque/html/index.html",
+		"/praca":                 "/praca/html/index.html",
+		"/praca/index.html":      "/praca/html/index.html",
+		"/praca/ajuda.html":      "/praca/html/ajuda.html",
+		"/praca/slides.html":     "/praca/html/slides.html",
+		"/praca/galeria3d.html":  "/praca/html/galeria3d.html",
+	}
+	for from, to := range redirects {
+		target := to
+		http.HandleFunc(from, func(w http.ResponseWriter, r *http.Request) {
+			http.Redirect(w, r, target, http.StatusMovedPermanently)
+		})
+	}
+
+	// Servir arquivos estáticos da Home e fallback
 	staticHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Headers para evitar erros de COOP no Google Auth
 		w.Header().Set("Cross-Origin-Opener-Policy", "same-origin-allow-popups")
 
-		// Rota raiz "/" serve home.html da pasta home
-		if r.URL.Path == "/" {
-			http.ServeFile(w, r, "internal/apps/home/views/home.html")
+		switch r.URL.Path {
+		case "/manifest.json":
+			http.ServeFile(w, r, "internal/apps/agenda/views/manifest.json")
+			return
+		case "/sw.js":
+			http.ServeFile(w, r, "internal/apps/agenda/views/js/sw.js")
+			return
+		case "/":
+			http.ServeFile(w, r, "internal/apps/home/views/html/home.html")
 			return
 		}
 
-		// Se o arquivo existir na pasta home (ex: style.css da home)
 		if _, err := os.Stat("internal/apps/home/views" + r.URL.Path); err == nil {
 			homeFS.ServeHTTP(w, r)
 			return
 		}
-
-		// Se não, tenta na pasta agenda (ex: script.js, agenda.html)
-		if _, err := os.Stat("internal/apps/agenda/views" + r.URL.Path); err == nil {
-			http.FileServer(http.Dir("internal/apps/agenda/views")).ServeHTTP(w, r)
+		if _, err := os.Stat("internal/apps/financeiro/views" + r.URL.Path); err == nil {
+			financeiroFS.ServeHTTP(w, r)
+			return
+		}
+		if _, err := os.Stat("internal/apps/estoque/views" + r.URL.Path); err == nil {
+			estoqueFS.ServeHTTP(w, r)
+			return
+		}
+		if _, err := os.Stat("internal/apps/praca/views" + r.URL.Path); err == nil {
+			pracaFS.ServeHTTP(w, r)
 			return
 		}
 
@@ -81,23 +115,46 @@ func main() {
 	})
 	http.Handle("/", staticHandler)
 
-	// Middleware para API
-	apiHandler := func(next http.Handler) http.Handler {
+	// Middleware global de cabeçalhos de segurança HTTP
+	securityHeadersMiddleware := func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Cross-Origin-Opener-Policy", "same-origin-allow-popups")
+			w.Header().Set("X-Content-Type-Options", "nosniff")
+			w.Header().Set("X-Frame-Options", "DENY")
+			w.Header().Set("Referrer-Policy", "strict-origin-when-cross-origin")
+			w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline' https://accounts.google.com; style-src 'self' 'unsafe-inline' https://accounts.google.com; frame-src 'self' https://accounts.google.com; connect-src 'self' https://accounts.google.com; img-src 'self' data: https:;")
 			next.ServeHTTP(w, r)
 		})
 	}
 
 	server := &http.Server{
-		Addr:    ":8080",
-		Handler: apiHandler(http.DefaultServeMux),
+		Addr:              ":8080",
+		Handler:           securityHeadersMiddleware(http.DefaultServeMux),
+		ReadHeaderTimeout: 10 * time.Second,
+		ReadTimeout:       30 * time.Second,
+		WriteTimeout:      30 * time.Second,
+		IdleTimeout:       60 * time.Second,
 	}
 
-	fmt.Printf("Servidor iniciado em http://localhost%s\n", server.Addr)
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
 
-	err := server.ListenAndServe()
-	if err != nil {
-		log.Fatal(err)
+	go func() {
+		fmt.Printf("Servidor iniciado em http://localhost%s\n", server.Addr)
+		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Fatal(err)
+		}
+	}()
+
+	<-ctx.Done()
+	log.Println("Encerrando servidor...")
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := server.Shutdown(shutdownCtx); err != nil {
+		log.Printf("Erro no shutdown do servidor HTTP: %v", err)
 	}
+	common_utils.ShutdownNotifications(shutdownCtx)
+	log.Println("Servidor encerrado com segurança.")
 }

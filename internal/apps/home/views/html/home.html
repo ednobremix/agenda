@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Portal Nobre</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#4a7c59">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="agenda">
+  <link rel="apple-touch-icon" href="../assets/logo.png">
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body class="home-body">
+  <div class="home-container">
+    <div id="user-bar" class="top-actions hidden">
+      <span id="user-name" style="font-size: 0.875rem; font-weight: 500;"></span>
+    </div>
+
+    <div class="top-actions-left">
+      <button onclick="clearCache()" class="btn-icon" title="Limpar Cache">🧹 Limpar Cache</button>
+    </div>
+
+    <header>
+      <div class="logo-box">
+        <img src="../assets/logo.png" alt="Logo Portal Nobre">
+      </div>
+      <h1>Portal Nobre</h1>
+      <p>Selecione o aplicativo que deseja acessar</p>
+
+      <div id="auth-section" style="margin-top: 1.5rem; display: flex; flex-direction: column; align-items: center; gap: 1rem;">
+        <div id="google-login-btn"></div>
+        <p id="register-text" style="font-size: 0.75rem; color: hsl(var(--muted-foreground));">
+          Acesse para gerenciar suas permissões.
+        </p>
+      </div>
+    </header>
+
+    <main class="app-grid">
+      <div class="app-card-container">
+        <a href="/agenda/html/login.html" id="app-agenda" class="app-card shadow-sm">
+          <div class="app-icon">📅</div>
+          <div class="app-info">
+            <h3>Agenda de Serviços</h3>
+            <p>Gestão de atendimentos e pagamentos.</p>
+            <span class="access-status text-muted-foreground" style="font-size: 0.7rem;"></span>
+          </div>
+          <div class="app-arrow">→</div>
+        </a>
+        <a href="/agenda/html/ajuda.html" class="app-help-link">Como funciona? ❓</a>
+      </div>
+
+      <div class="app-card-container">
+        <a href="/financeiro/html/login.html" id="app-financeiro" class="app-card shadow-sm">
+          <div class="app-icon">💰</div>
+          <div class="app-info">
+            <h3>Financeiro</h3>
+            <p>Controle financeiro pessoal.</p>
+            <span class="access-status text-muted-foreground" style="font-size: 0.7rem;"></span>
+          </div>
+          <div class="app-arrow">→</div>
+        </a>
+        <a href="/financeiro/html/ajuda.html" class="app-help-link">Como funciona? ❓</a>
+      </div>
+
+      <div class="app-card-container">
+        <a href="/estoque/html/login.html" id="app-estoque" class="app-card shadow-sm">
+          <div class="app-icon">📦</div>
+          <div class="app-info">
+            <h3>Estoque</h3>
+            <p>Controle de produtos e estoque.</p>
+            <span class="access-status text-muted-foreground" style="font-size: 0.7rem;"></span>
+          </div>
+          <div class="app-arrow">→</div>
+        </a>
+        <a href="/estoque/html/ajuda.html" class="app-help-link">Como funciona? ❓</a>
+      </div>
+
+      <div class="app-card-container">
+        <a href="/praca/html/index.html" id="app-praca" class="app-card shadow-sm">
+          <div class="app-icon">🌳</div>
+          <div class="app-info">
+            <h3>Praça</h3>
+            <p>Espaço de lazer e distrações.</p>
+            <span class="access-status" style="font-size: 0.7rem; color: hsl(var(--primary));">🔓 Acesso Livre</span>
+          </div>
+          <div class="app-arrow">→</div>
+        </a>
+        <a href="/praca/html/ajuda.html" class="app-help-link">Como funciona? ❓</a>
+      </div>
+    </main>
+
+    <footer style="text-align: center; margin-top: 3rem; font-size: 0.75rem; color: hsl(var(--muted-foreground));">
+      &copy; 2026 Portal Nobre. Todos os direitos reservados.
+    </footer>
+  </div>
+  <script src="../js/home.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then(reg => console.log('Service Worker registrado!', reg))
+          .catch(err => console.log('Falha ao registrar Service Worker:', err));
+      });
+    }
+  </script>
+</body>
+</html>
